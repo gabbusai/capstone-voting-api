@@ -28,6 +28,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
     Route::get('/election/{electionId}', [ElectionController::class, 'getAnElection'])->name('api.getAnElection');
 });
 
+Route::get('/elections/registered', [ElectionController::class, 'getAllRegistered'])->name('api.getAllRegistered');
+
 //ADMIN ONLY ROUTES
 Route::middleware(['auth:sanctum', 'admin'])->group(function() {
     Route::post('/file-candidate', [CandidateController::class, 'fileCandidacy'])->name('api.fileCandidacy');
