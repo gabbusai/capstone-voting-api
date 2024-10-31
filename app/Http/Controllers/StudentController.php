@@ -89,7 +89,7 @@ class StudentController extends Controller
             return response()->json([
                 'message' => 'You are not a registered candidate.'
             ], 403); // Forbidden
-        }
+        } 
     
         // Fetch the position
         $position = Position::find($positionId);

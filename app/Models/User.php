@@ -82,4 +82,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(VoteStatus::class); // Link to VoteStatus model
     }
 
+    public function verification_codes()
+    {
+        return $this->hasMany(VerificationCodes::class);
+    }
 }

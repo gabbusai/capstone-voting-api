@@ -21,8 +21,10 @@ class AuthController extends Controller
     /**
      * Display a listing of the resource.
      */
+
+    //login mobile app
     public function login(LoginUserRequest $request)
-    {
+    {   
         $request->validated($request->all());
         // Find the user by student_id or email
         $user = User::where('student_id', $request->student_id)
@@ -40,11 +42,10 @@ class AuthController extends Controller
         ], 'Login successful');
     }
 
+    //register mobile app
     public function register(StoreUserRequest $request){
     $validatedData = $request->validated($request->all());
     //check if student number is in record db
-    
-    //if student no exists and request is validated, attempt to create new user
     $user = User::create([
         'name' => $request->name,
         'email' => $request->email,
@@ -55,16 +56,20 @@ class AuthController extends Controller
         'contact_no' => $request->contact_no,
         'section' => $request->section
     ]);
+    
 
+    //mail to user providing the token
     Mail::to($user->email)->send(New WelcomeMail($user));
-    //return user and token for authentication
+    
 
+    
     //event(new Registered($user));
     return $this->success([
         'user' => $user,
         'token' => $user->createToken('API Token of ' . $user->name)->plainTextToken
     ], 'success');
 }
+
 
     public function logout(){
         Auth::user()->currentAccessToken()->delete();

@@ -25,7 +25,6 @@ class CandidacyFileRequest extends FormRequest
         'user_id' => ['required', 'integer', 'exists:users,id'],
         'position_id' => ['required', 'integer', 'exists:positions,id'],
         'election_id' => ['required', 'integer', 'exists:elections,id'],
-        'department_id' => ['nullable', 'integer', 'exists:departments,id'], 
         'party_list_id' => ['nullable', 'integer', 'exists:party_lists,id'],
         ];
     }

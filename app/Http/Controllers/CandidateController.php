@@ -27,17 +27,21 @@ class CandidateController extends Controller
                 'message' => 'User or Election or Position not found.'
             ], 404);
         }
+
+        //ensure department_id of user(student) is equal to election's department_id
+        //department_id should not be an input but instead be the associated key of the user(student)
     
         // Update the user's role to candidate (role_id 2)
         $user->role_id = 2;
         $user->save();
-    
+        
+        $userDep = $user->department_id;
         // Create a new candidate record
         $candidate = Candidate::create([
             'student_id' => $user->student_id,
             'user_id' => $user->id,
             'election_id' => $validatedData['election_id'],
-            'department_id' => $validatedData['department_id'],
+            'department_id' => $userDep,
             'position_id' => $validatedData['position_id'],
             'party_list_id' => $validatedData['party_list_id']
         ]);
