@@ -16,7 +16,6 @@ class ElectionController extends Controller
     //show all elections
     public function getAllElections(){
     $elections = Election::all();
-
     if(is_null($elections)){
         return response()->json([
             'message' => 'No elections found'
@@ -37,23 +36,37 @@ class ElectionController extends Controller
         return response()->json($election);
     }
 
-    //create election (unfinished)
-    public function createElection(MakeElectionRequest $request){
+    public function createElection(MakeElectionRequest $request)
+    {
         $user = Auth::user();
         $validatedData = $request->validated();
-        if($user->role != 3){
+    
+        // Check if the user has admin role (role_id of 3)
+        if ($user->role_id != 3) {
             return response()->json([
-                'message' => 'You are not authorized to create an election'
+                'message' => 'You are not authorized to create an election.'
             ], 403);
         }
-        //create election
+    
+        // Create election with validated data
         $election = Election::create([
             'election_name' => $validatedData['election_name'],
             'election_type_id' => $validatedData['election_type_id'],
-            'department_id' => $validatedData['department_id'],
+            'department_id' => $validatedData['department_id'], // Nullable for general elections
+            'campaign_start_date' => $validatedData['campaign_start_date'],
+            'campaign_end_date' => $validatedData['campaign_end_date'],
+            'election_start_date' => $validatedData['election_start_date'],
+            'election_end_date' => $validatedData['election_end_date'],
+            'status' => $validatedData['status'] ?? 'upcoming', // Defaults to 'upcoming' if not provided
         ]);
-        //send email to all Users
+    
+        // Return a response with the created election details
+        return response()->json([
+            'message' => 'Election created successfully.',
+            'election' => $election
+        ], 201); // Status 201 for resource creation
     }
+    
 
     public function getAllRegistered()
     {

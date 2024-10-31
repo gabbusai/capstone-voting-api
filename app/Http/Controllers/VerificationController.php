@@ -18,7 +18,6 @@ class VerificationController extends Controller
     {
         // Get the authenticated user
         $user = Auth::user();
-
         // Generate a unique 6-digit code
         $code = mt_rand(100000, 999999);
 
