@@ -24,7 +24,6 @@ class ElectionController extends Controller
         return response()->json($elections);
     }
 
-
     //show election details by ID
     public function getAnElection($electionId){
         $election = Election::find($electionId);
@@ -74,7 +73,7 @@ class ElectionController extends Controller
         $students = Student::whereHas('user')->with('user')->get();
         $studentCount = Student::all()->count();
         $userCount = $students->count();
-    
+        
         return response()->json([
             'total_students' => $studentCount,
             'total_registered' => $userCount,

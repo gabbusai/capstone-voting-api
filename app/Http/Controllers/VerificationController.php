@@ -68,7 +68,7 @@ class VerificationController extends Controller
         // Update the user's email verification timestamp
         $user->email_verified_at = now();
         $user->save();
-    
+        
         return response()->json(['message' => 'Email verified successfully.'], 200);
     }
 }

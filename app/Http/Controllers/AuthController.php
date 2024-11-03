@@ -61,8 +61,6 @@ class AuthController extends Controller
     //mail to user providing the token
     Mail::to($user->email)->send(New WelcomeMail($user));
     
-
-    
     //event(new Registered($user));
     return $this->success([
         'user' => $user,
@@ -77,4 +75,6 @@ class AuthController extends Controller
             'message' => 'Successfully logged out'
         ], '');
     }
+
+    //verification stuff
 }
