@@ -17,4 +17,8 @@ class VoteStatus extends Model
     {
         return $this->belongsTo(Election::class); // Link to Election model
     }
+
+    public function votes(){
+        return $this->hasMany(Vote::class);
+    }
 }

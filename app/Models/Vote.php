@@ -20,4 +20,8 @@ class Vote extends Model
     {
         return $this->belongsTo(Election::class); // Link to Election model
     }
+
+    public function vote_status(){
+        return $this->belongsTo(VoteStatus::class); // Link to VoteStatus model
+    }
 }

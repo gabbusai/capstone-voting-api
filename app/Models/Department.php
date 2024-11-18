@@ -23,6 +23,11 @@ class Department extends Model
         return $this->hasMany(Candidate::class);
     }
 
+    //a department has many positions
+    public function positions()
+    {
+        return $this->hasMany(Position::class);
+    }
 
     //can have many elections
     public function elections()

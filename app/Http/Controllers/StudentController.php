@@ -6,10 +6,25 @@ use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\Election;
 use App\Models\Position;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class StudentController extends Controller
-{
+{   
+    public function getUser(){
+        $user = User::find(Auth::user()->id);
+        $department = Department::find($user->department_id);
+        $role = Role::find($user->role_id);
+        return response()->json($user);
+        /*return response()->json([
+            'message' => 'fetched user',
+            'user' => $user,
+            'department' => $department,
+            'role' => $role
+        ]); */
+    }
     public function getAllDepartments(){
         $departments = Department::all();
         return response()->json([
@@ -17,6 +32,7 @@ class StudentController extends Controller
         ]);
     }
 
+    
     public function getCandidatesByPosition($electionId, $positionId)
     {
         // Fetch candidates filtered by position_id and eager load the related user and department

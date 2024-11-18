@@ -18,6 +18,7 @@ return new class extends Migration
         $table->foreignId('position_id')->constrained('positions')->onDelete('cascade');
         $table->foreignId('candidate_id')->constrained('candidates')->onDelete('cascade'); // Foreign key to Candidates table
         $table->foreignId('election_id')->constrained('elections')->onDelete('cascade'); // Foreign key to Elections table
+        $table->foreignId('vote_status_id')->constrained('vote_statuses')->onDelete('cascade');
         $table->timestamps();
         });
     }
