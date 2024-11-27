@@ -22,7 +22,7 @@ class CandidacyFileRequest extends FormRequest
     public function rules(): array
     {
         return [
-        'user_id' => ['required', 'integer', 'exists:users,id'],
+        'student_id' => ['required', 'integer', 'exists:students,id'],
         'position_id' => ['required', 'integer', 'exists:positions,id'],
         'election_id' => ['required', 'integer', 'exists:elections,id'],
         'party_list_id' => ['nullable', 'integer', 'exists:party_lists,id'],

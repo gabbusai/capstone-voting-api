@@ -18,7 +18,8 @@ return new class extends Migration
         $table->string('election_name'); // Election name
 
         $table->dateTime('campaign_start_date');//start of campaigning
-        $table->dateTime('campaign_end_date');//start of campaigning
+        $table->dateTime('campaign_end_date');//end of campaigning
+        
         $table->dateTime('election_start_date'); // Start date and time
         $table->dateTime('election_end_date'); // End date and time
         $table->enum('status', ['upcoming', 'ongoing', 'completed'])->default('upcoming'); // Status of the election

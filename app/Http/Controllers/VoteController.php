@@ -15,7 +15,7 @@ class VoteController extends Controller
     // Function to start the voting process
     public function startVoting($electionId)
     {
-        $userId = Auth::id();
+        $userId = Auth::user()->id;
 
         // Check if the user already has a vote status for this election
         $voteStatus = VoteStatus::firstOrCreate(
@@ -29,9 +29,11 @@ class VoteController extends Controller
     // Function to cast votes for multiple positions
     public function castVotes(Request $request)
     {
-        $userId = Auth::id();
-        $electionId = $request->input('election_id');
-        $votes = $request->input('votes'); // Array of votes [{position_id, candidate_id}, ...]
+        
+        $validatedData = $request->validated();
+        $electionId = $validatedData['election_id'];
+        $votes = $validatedData['votes'];
+        $userId = Auth::user()->id;
 
         // Validate input
         if (!$votes || !is_array($votes)) {
@@ -75,7 +77,7 @@ class VoteController extends Controller
     // Function to fetch all votes for a user in a specific election
     public function getUserVotes($electionId)
     {
-        $userId = Auth::id();
+        $userId = Auth::user()->id;
 
         // Fetch votes based on the vote status ID
         $votes = Vote::where('user_id', $userId)

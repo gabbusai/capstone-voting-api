@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Election;
 use App\Models\Position;
 use App\Models\Role;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -93,6 +94,74 @@ class StudentController extends Controller
             'position_department_id' => $position->department_id
         ], 200);
     }
+
+    public function findStudentId($student_id)
+    {
+        // Validate that the student_id is provided
+        if (!$student_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student ID is required.'
+            ], 400); // Bad Request
+        }
+    
+        // Search for the student ID in the database
+        $student = Student::where('id', $student_id)->first();
+    
+        // Check if the student was found
+        if ($student) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Student ID exists.',
+                'data' => $student // Optional: Include student details
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student ID not found.'
+            ], 404); // Not Found
+        }
+    }
+
+    public function validateStudentName(Request $request)
+{
+    // Validate the request
+    $validatedData = $request->validate([
+        'student_id' => 'required|string|max:255', // Ensure student_id is provided
+        'name' => 'required|string|max:255', // Ensure name is provided
+    ]);
+
+    // Extract validated data
+    $student_id = $validatedData['student_id'];
+    $name = $validatedData['name'];
+
+    // Search for the student by ID
+    $student = Student::where('id', $student_id)->first();
+
+    // Check if the student exists
+    if (!$student) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Student ID not found.'
+        ], 404); // Not Found
+    }
+
+    // Validate if the name matches
+    if (strtolower($student->name) === strtolower($name)) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Student ID and name match.',
+            'data' => $student // Optional: include student details
+        ]);
+    } else {
+        return response()->json([
+            'success' => false,
+            'message' => 'The name does not match the student ID.'
+        ], 422); // Unprocessable Entity
+    }
+}
+
+    
 
 
     public function testFileForCandidacy($userId, $positionId)

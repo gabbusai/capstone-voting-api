@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('votes', function (Blueprint $table) {
-        $table->id('vote_id'); // Vote ID
+        $table->id(); // Vote ID
         //voteExists =  user -> has votes -> where ('position_id') exists and where election_id = 'current election'
         $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Foreign key to Students table
         $table->foreignId('position_id')->constrained('positions')->onDelete('cascade');

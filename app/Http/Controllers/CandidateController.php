@@ -16,26 +16,36 @@ class CandidateController extends Controller
     {
         // Validate request data
         $validatedData = $request->validated();
-    
-        // Fetch the user and position
-        $user = User::find($validatedData['user_id']);
+        $student_id = $validatedData['student_id'];
+        
+        // Fetch the user based on student_id, and ensure that it exists
+        $user = User::where('student_id', $student_id)->first();
+        
+        // Fetch position and election
         $position = Position::find($validatedData['position_id']);
         $election = Election::find($validatedData['election_id']);
-        // Check if user and position exist
+        
+        // Check if user, position, or election exist
         if (!$user || !$position || !$election) {
             return response()->json([
                 'message' => 'User or Election or Position not found.'
             ], 404);
         }
-
-        //ensure department_id of user(student) is equal to election's department_id
-        //department_id should not be an input but instead be the associated key of the user(student)
+    
+        // Ensure department_id of user(student) matches election's department_id
+        if ($user->department_id !== $election->department_id) {
+            return response()->json([
+                'message' => 'User and Election department mismatch.'
+            ], 400);
+        }
     
         // Update the user's role to candidate (role_id 2)
         $user->role_id = 2;
         $user->save();
-        
+    
+        // Get the user's department_id
         $userDep = $user->department_id;
+    
         // Create a new candidate record
         $candidate = Candidate::create([
             'student_id' => $user->student_id,
@@ -45,7 +55,7 @@ class CandidateController extends Controller
             'position_id' => $validatedData['position_id'],
             'party_list_id' => $validatedData['party_list_id']
         ]);
-    
+        
         // Return success response
         return response()->json([
             'message' => 'Candidacy successfully filed.',
@@ -53,6 +63,18 @@ class CandidateController extends Controller
             'user' => $user->role_id,
             'election' => $election
         ], 201);
+    }
+    
+
+    public function getAllCandidates()
+    {
+        $candidates = Candidate::with(['user', 'election'])->get();
+        return response()->json($candidates);
+    }
+
+    public function getAllPositions(){
+        $positions = Position::all();
+        return response()->json($positions);
     }
     
 }

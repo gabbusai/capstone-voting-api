@@ -6,6 +6,7 @@ use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\VerificationController;
+use App\Models\Candidate;
 use App\Models\Election;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -18,8 +19,9 @@ Route::post('/admin-login', [AdminController::class, 'adminLogin'])->name('auth.
 
 //PUBLIC ROUTES
 Route::get('/getDepartments', [StudentController::class,
-            'getAllDepartments'])->name('api.getDepartments');
-
+            'getAllDepartments'])->name('api.getDepartments'); 
+Route::get('/student/{student_id}', [StudentController::class, 'findStudentId'])->name('api.findStudentId');
+Route::post('/student/validate-name', [StudentController::class, 'validateStudentName'])->name('api.validateName');
 //PRIVATE ROUTES
 Route::group(['middleware' => ['auth:sanctum']], function(){
     Route::post('/send-verification', [VerificationController::class, 'sendVerification'])->name('api.sendVerification');
@@ -48,6 +50,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function() {
     Route::get('/candidates/position/{electionId}/{positionId}', [StudentController::class, 
     'getCandidatesByPosition'])->name('api.getCandidatesByPosition');
     Route::post('/elections/make', [AdminController::class, 'createElection'])->name('api.createElection');
+    
     Route::post('/verify-make-candidate', [AdminController::class, 'checkAndFileCandidacy'])->name('api.checkAndFileCandidacy');
 });
 //CANDIDATE ONLY ROUTES
@@ -55,5 +58,6 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function() {
 //test routes
 Route::post('/candidacy/test/{userId}/{positionId}', [StudentController::class, 
             'testFileForCandidacy'])->name('api.testFileForCandidacy');
-
+Route::get('/candidates/all', [CandidateController::class, 'getAllCandidates'])->name('api.getCandidates');
+Route::get('/positions/all', [CandidateController::class, 'getAllPositions'])->name('api.getPositions');
             
