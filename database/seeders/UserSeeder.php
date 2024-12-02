@@ -13,7 +13,7 @@ class UserSeeder extends Seeder
     {
         $users = [
             // SSC Users (General)
-            ['name' => 'Jon Jones', 'student_id' => 1, 'department_id' => 1, 'role_id' => 2, 'contact_no' => '09123456789', 'email' => 'jon@example.com', 'section' => '4A'],
+            ['name' => 'Jon Jones', 'student_id' => 1, 'department_id' => 1, 'role_id' => 2, 'contact_no' => '09123456789', 'email' => 'bones@example.com', 'section' => '4A'],
             ['name' => 'Alex Pereira', 'student_id' => 2, 'department_id' => 2, 'role_id' => 2, 'contact_no' => '09123456780', 'email' => 'alex@example.com', 'section' => '4B'],
             ['name' => 'Michael Bisping', 'student_id' => 3, 'department_id' => 3, 'role_id' => 2, 'contact_no' => '09123456781', 'email' => 'bisping@example.com', 'section' => '5A'],
             ['name' => 'Joe Rogan', 'student_id' => 4, 'department_id' => 4, 'role_id' => 2, 'contact_no' => '09123456782', 'email' => 'rogan@example.com', 'section' => '4C'],
@@ -50,6 +50,9 @@ class UserSeeder extends Seeder
             ['name' => 'Theon Greyjoy', 'student_id' => 29, 'department_id' => 2, 'role_id' => 2, 'contact_no' => '09123456793', 'email' => 'theon@example.com', 'section' => '5B'],
             ['name' => 'Brienne of Tarth', 'student_id' => 30, 'department_id' => 2, 'role_id' => 2, 'contact_no' => '09123456793', 'email' => 'tarth@example.com', 'section' => '4A'],
 
+
+            //admin
+            ['name' => 'Admin', 'student_id' => '9999','department_id' => 2, 'role_id' => 3, 'contact_no' => '09123456789', 'email' => 'admin@example.com', 'section' => '5A' ]
         ];
 
         foreach ($users as $user) {

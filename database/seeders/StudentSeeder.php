@@ -46,6 +46,11 @@ class StudentSeeder extends Seeder
             ['id' => 28, 'year' => 3, 'name' => 'Jorah Mormont'],
             ['id' => 29, 'year' => 3, 'name' => 'Theon Greyjoy'],
             ['id' => 30, 'year' => 3, 'name' => 'Brienne of Tarth'],
+
+            //TESTING BUKAS
+            ['id' => '0121300895', 'year' => 4, 'name' => 'John Gabriel Dayrit'],
+            ['id'=> '012345', 'year' => 1, 'name' => 'Test Smith'],
+            ['id' => '9999', 'year' => 4, 'name' => 'Admin'],
         ];
 
         DB::table('students')->insert($students);
