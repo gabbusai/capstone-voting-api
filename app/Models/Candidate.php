@@ -65,4 +65,5 @@ class Candidate extends Model
         return $this->hasMany(Result::class); // Link to Result model
     }
 
+    
 }

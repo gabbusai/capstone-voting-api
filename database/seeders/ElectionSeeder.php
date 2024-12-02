@@ -43,6 +43,19 @@ class ElectionSeeder extends Seeder
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
+
+                [
+                    'election_type_id' => 2, // Department Election
+                    'department_id' => 2, // 1 for CCIS
+                    'election_name' => 'CON Student Council Elections 2024',
+                    'campaign_start_date' => $now,
+                    'campaign_end_date' => $now->copy()->addWeek(), // One week from now
+                    'election_start_date' => $now->copy()->addWeek()->addDay(), // Starts after campaign ends
+                    'election_end_date' => $now->copy()->addWeek()->addDays(3), // Ends two days after it starts
+                    'status' => 'upcoming', // Initial status
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
     
             ]);
         }

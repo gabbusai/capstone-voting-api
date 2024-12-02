@@ -124,7 +124,7 @@ class StudentController extends Controller
     }
 
     public function validateStudentName(Request $request)
-{
+    {
     // Validate the request
     $validatedData = $request->validate([
         'student_id' => 'required|string|max:255', // Ensure student_id is provided
