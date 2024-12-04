@@ -21,9 +21,9 @@ class User extends Authenticatable implements MustVerifyEmail
      * @var array<int, string>
      */
     protected $fillable = [
-        'name', 'email', 'password', 
+        'name', 'email', 
         'student_id', 'department_id', 'role_id', 
-        'contact_no', 'section'
+        'device_id'
     ];
 
     /**
@@ -85,5 +85,9 @@ class User extends Authenticatable implements MustVerifyEmail
     public function verification_codes()
     {
         return $this->hasMany(VerificationCodes::class);
+    }
+
+    public function tokenOTPs(){
+        return $this->hasMany(TokenOTP::class);
     }
 }

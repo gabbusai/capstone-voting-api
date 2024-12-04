@@ -16,14 +16,15 @@ return new class extends Migration
             $table->string('name');
             $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
             $table->foreignId('department_id')->constrained('departments')->onDelete('cascade');
-            $table->string('section');
+            //$table->string('section');
             $table->foreignId('role_id')->constrained('roles')->onDelete('cascade');
-
-            $table->string('contact_no');
-            $table->string('email')->unique();
+            //$table->string('contact_no')->nullable();
+            $table->string('email')->unique()->nullable();
             $table->timestamp('email_verified_at')->nullable(); //isVerified
-            $table->string('password');
+            //$table->string('password');
             $table->rememberToken();
+            //device ID
+            $table->string('device_id');
             $table->timestamps();
         });
 

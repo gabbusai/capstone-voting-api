@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
 Route::post('/admin-login', [AdminController::class, 'adminLogin'])->name('auth.adminLogin');
+Route::post('/newLogin', [AuthController::class, 'newLogin'])->name('auth.NewLogin');
+Route::post('/verifyOTP', [AuthController::class, 'verifyOTP'])->name('auth.NewLogin');
 
 //PUBLIC ROUTES
 Route::get('/getDepartments', [StudentController::class,

@@ -22,4 +22,8 @@ class Student extends Model
     {
         return $this->hasOne(Candidate::class);
     }
+
+    public function department(){
+        return $this->belongsTo(Department::class);
+    }
 }
