@@ -52,6 +52,8 @@ class StudentSeeder extends Seeder
             ['id' => '0121302082', 'year' => 4, 'name' => 'John Aurvey Villapana', 'department_id' => 1],
             ['id' => '0121302060', 'year' => 4, 'name' => 'Ianne Lloyd Amerson C. Chua', 'department_id' => 1],
             ['id' => '0121300648', 'year' => 4, 'name' => 'Mark Daniel Torres', 'department_id' => 1],
+            ['id' => '0122303517', 'year' => 4, 'name' => 'Jesus Brown', 'department_id' => 1],
+            ['id' => '0120301756', 'year' => 4, 'name' => 'Nelson Intal', 'department_id' => 1],
             
             ['id'=> '012345', 'year' => 1, 'name' => 'Test Smith', 'department_id' => 1],
             ['id' => '9999', 'year' => 4, 'name' => 'Admin', 'department_id' => 1],

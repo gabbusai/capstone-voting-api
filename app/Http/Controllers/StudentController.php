@@ -14,18 +14,19 @@ use Illuminate\Support\Facades\Auth;
 
 class StudentController extends Controller
 {   
-    public function getUser(){
-        $user = User::find(Auth::user()->id);
-        $department = Department::find($user->department_id);
-        $role = Role::find($user->role_id);
-        return response()->json($user);
-        /*return response()->json([
-            'message' => 'fetched user',
-            'user' => $user,
-            'department' => $department,
-            'role' => $role
-        ]); */
+
+    public function getUser()
+{
+    $user = User::with(['department', 'role'])->find(Auth::user()->id);
+
+    // Ensure user exists
+    if (!$user) {
+        return response()->json(['message' => 'User not found'], 404);
     }
+
+    return response()->json($user);
+}
+
     public function getAllDepartments(){
         $departments = Department::all();
         return response()->json([

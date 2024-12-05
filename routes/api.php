@@ -46,6 +46,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
 //PRIVATE AND AUTHENTICATED USERS ONLY ROUTES , 'verified'
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/candidates/{candidateId}', [CandidateController::class, 'getCandidate'])->name('api.getCandidate');
     Route::get('/elections/{electionId}/candidates', [ElectionController::class, 'getCandidatesByElection'])->name('api.viewCandidatesByElection');
     Route::get('/elections/{electionId}/positions', [ElectionController::class, 'getPositionsForElection'])->name('api.getPositionsOfElection');
     Route::get('/elections/{electionId}', [ElectionController::class, 'getAnElection'])->name('api.getAnElection');

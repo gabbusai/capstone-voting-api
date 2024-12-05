@@ -76,5 +76,12 @@ class CandidateController extends Controller
         $positions = Position::all();
         return response()->json($positions);
     }
+
+    public function getCandidate($id){
+        $candidate = Candidate::with(['user', 'election', 'department', 'partylist', 'position'])->find($id);
+        return response()->json($candidate);
+    }
+
+    
     
 }
