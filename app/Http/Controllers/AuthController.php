@@ -195,9 +195,9 @@ public function verifyOTP(Request $request)
         return $this->error('', 'OTP token has expired', 400);
     }
 
-    if($tokenRecord->used === 1){
+    /*if($tokenRecord->used === 1){
         return $this->error('', 'OTP token has been used', 400);
-    }
+    } */
 
     // Mark the OTP as used (to prevent reuse)
     $tokenRecord->used = true;
@@ -212,10 +212,6 @@ public function verifyOTP(Request $request)
         'token_type' => 'Bearer',
     ], 'OTP verified successfully.');
 }
-
-
-
-
 
 
 }

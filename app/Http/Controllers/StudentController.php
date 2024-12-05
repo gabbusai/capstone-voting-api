@@ -123,6 +123,45 @@ class StudentController extends Controller
         }
     }
 
+    public function checkIfAccountExists($student_id)
+    {
+        // Validate that the student_id is provided
+        if (!$student_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student ID is required.'
+            ], 400); // Bad Request
+        }
+    
+        // Check if a student exists with the provided student_id
+        $student = Student::where('id', $student_id)->first();
+    
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No student found with the provided ID.'
+            ], 404); // Not Found
+        }
+    
+        // Check if a user account exists for this student
+        $user = User::where('student_id', $student->id)->first();
+    
+        if ($user) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Account exists.',
+                'data' => [
+                    'user' => $user, // Include user details if needed
+                ],
+            ], 200); // OK
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'No account exists for this student.',
+            ], 404); // Not Found
+        }
+    }
+    
     public function validateStudentName(Request $request)
     {
     // Validate the request
