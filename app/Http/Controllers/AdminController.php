@@ -12,28 +12,68 @@ use App\Models\Election;
 use App\Models\ElectionType;
 use App\Models\PartyList;
 use App\Models\Position;
+use App\Models\Post;
 use App\Models\Student;
+use App\Models\TokenOTP;
 use App\Models\User;
 use App\Traits\HttpResponses;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Mail;
-
+use Illuminate\Support\Facades\Storage;
 class AdminController extends Controller
 {
     use HttpResponses;
-    public function adminLogin(LoginUserRequest $request)
+    public function adminLogin(Request $request)
     {   
-        $request->validated($request->all());
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'email' => 'required|email',
+            'tokenOTP' => 'required'
+        ]);
+
+
+        // Fetch the student based on student_id
+        $student = Student::where('id', $request->student_id)->first();
+
+        if (!$student) {
+            return $this->error('', 'Student not found', 404);
+        }
+
         // Find the user by student_id or email
         $user = User::where('student_id', $request->student_id)
                     ->orWhere('email', $request->email)
                     ->first();
-        // Check if the user exists and the password is correct
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return $this->error('', 'CREDENTIALS DO NOT MATCH', 401);
+        // Ensure the user exists
+        if (!$user) {
+            return $this->error('', 'User not found', 404);
+        }
+
+        /*if($user->device_id !== $request->device_id){
+            return $this->error('', 'Device ID does not match', 401);
+        } */
+        
+        if($user->email != $request->email){
+            return $this->error('', 'Email does not match', 401);
+        }
+
+        // Fetch the OTP record using the token provided
+        $tokenRecord = TokenOTP::where('tokenOTP', $request->tokenOTP)->first();
+
+        // Check if token is invalid or expired
+        if (!$tokenRecord) {
+            return $this->error('', 'Invalid OTP token', 404);
+        }
+
+        if ($tokenRecord->user_id !== $user->id){
+            return $this->error('', 'Invalid OTP Token', 404);
+        }
+
+        if($tokenRecord->tokenOTP != $request->tokenOTP){
+            return $this->error('', 'Invalid OTP token', 404);
         }
 
 
@@ -183,6 +223,80 @@ class AdminController extends Controller
 
 
     //monitor results
+
+
+    //approve post
+    public function approvePost(Request $request, $postId)
+{
+    $user = Auth::user();
+
+    // Ensure the user is authenticated
+    if (!$user) {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
+
+    // Check if the user has admin privileges (assuming role_id 3 is for admin)
+    if ($user->role_id !== 3) {
+        return response()->json(['message' => 'Forbidden. Only admins can approve posts.'], 403);
+    }
+
+    // Find the post
+    $post = Post::find($postId);
+
+    // Check if the post exists
+    if (!$post) {
+        return response()->json(['message' => 'Post not found.'], 404);
+    }
+
+    // Approve the post
+    $post->is_approved = true;
+    $post->save();
+
+    return response()->json([
+        'message' => 'Post approved successfully.',
+        'post' => $post,
+    ], 200);
+}
+
+public function removeCandidateStatus($userId)
+{
+    // Check if the authenticated user is an admin
+    $user = Auth::user();
+    if ($user->role_id !== 3) { // Assuming 3 is the admin role_id
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // Find the user by ID
+    $userToUpdate = User::findOrFail($userId);
+
+    // Check if the user is a candidate
+    $candidate = $userToUpdate->candidate;
+    if (!$candidate) {
+        return response()->json(['message' => 'User is not a candidate.'], 400);
+    }
+
+    // Remove the candidate's profile photo (if any)
+    if ($candidate->profile_photo) {
+        Storage::disk('public')->delete($candidate->profile_photo);
+    }
+
+    // Delete all posts associated with the candidate and their images
+    foreach ($candidate->posts as $post) {
+        if ($post->image) {
+            Storage::disk('public')->delete($post->image);
+        }
+        $post->delete();
+    }
+
+    // Delete the candidate record
+    $candidate->delete();
+
+    // Revert the user's role to regular user (e.g., role_id 1)
+    $userToUpdate->role_id = 1; // Assuming 1 is the role_id for a regular user
+    $userToUpdate->save();
+
+    return response()->json(['message' => 'Candidate status successfully removed and associated data deleted.'], 200);
+}
 
 
 }

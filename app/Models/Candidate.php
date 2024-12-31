@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Candidate extends Model
 {
@@ -11,6 +12,25 @@ class Candidate extends Model
 
     protected $fillable = ['student_id', 'user_id', 'department_id', 
                         'position_id', 'party_list_id' , 'election_id'];
+
+    protected static function boot(){
+    parent::boot();
+    static::deleting(function ($candidate) {
+    // Delete the profile photo
+    if ($candidate->profile_photo) {
+        Storage::disk('public')->delete($candidate->profile_photo);
+    }
+    // Delete all posts related to the candidate and their images
+    foreach ($candidate->posts as $post) {
+        if ($post->image) 
+        {
+        Storage::disk('public')->delete($post->image);
+        }
+        $post->delete();
+    }
+    });
+    }
+
 
     // A candidate belongs to a student
     public function student()

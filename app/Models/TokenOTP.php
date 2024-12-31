@@ -15,7 +15,6 @@ class TokenOTP extends Model
     // Specify the columns that can be mass-assigned
     protected $fillable = [
         'user_id',
-        'token',
         'expires_at',
         'used',
         'student_id',

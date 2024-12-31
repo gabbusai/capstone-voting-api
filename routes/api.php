@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\ElectionController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\VerificationController;
 use App\Models\Candidate;
@@ -51,6 +52,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/elections/{electionId}/positions', [ElectionController::class, 'getPositionsForElection'])->name('api.getPositionsOfElection');
     Route::get('/elections/{electionId}', [ElectionController::class, 'getAnElection'])->name('api.getAnElection');
     Route::get('/elections', [ElectionController::class, 'getAllElections'])->name('api.getAllElections');
+
+    Route::post('/candidates/{candidateId}/upload-photo', [CandidateController::class, 'uploadProfilePhoto']);
+    Route::post('/candidates/posts/upload', [PostController::class, 'createPost']);
+    Route::get('/candidates/posts/{id}', [PostController::class, 'getPost']);
+    Route::get('/candidates/posts/all', [PostController::class, 'getAllPosts']);
+    Route::put('/candidates/posts/update/{postId}', [PostController::class, 'updatePost']);
+    Route::delete('/candidates/posts/delete/{postId}', [PostController::class, 'deletePost']);
 });
 
 //ADMIN ONLY ROUTES
@@ -64,6 +72,9 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::post('/elections/make', [AdminController::class, 'createElection'])->name('api.createElection');
 
     Route::post('/verify-make-candidate', [AdminController::class, 'checkAndFileCandidacy'])->name('api.checkAndFileCandidacy');
+    Route::post('/posts/{postId}/approve', [AdminController::class, 'approvePost'])->name('api.approvePost');
+    Route::delete('/admin/remove-candidate/{userId}', [AdminController::class, 'removeCandidateStatus']);
+
 });
 //CANDIDATE ONLY ROUTES
 

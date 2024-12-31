@@ -179,9 +179,11 @@ public function verifyOTP(Request $request)
         return $this->error('', 'User not found', 404);
     }
 
+    /*
     if($user->device_id !== $request->device_id){
         return $this->error('', 'Device ID does not match', 401);
     }
+    */
 
     // Fetch the OTP record using the token provided
     $tokenRecord = TokenOTP::where('tokenOTP', $request->tokenOTP)->first();
@@ -198,6 +200,10 @@ public function verifyOTP(Request $request)
 
     if (!$tokenRecord->expires_at || Carbon::now()->greaterThan($tokenRecord->expires_at)) {
         return $this->error('', 'OTP token has expired', 400);
+    }
+
+    if($tokenRecord->tokenOTP != $request->tokenOTP){
+        return $this->error('', 'Invalid OTP Token', 404);
     }
 
     /*if($tokenRecord->used === 1){

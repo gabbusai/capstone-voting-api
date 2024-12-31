@@ -9,7 +9,7 @@ class Post extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['candidate_id', 'title', 'content', 'image'];
+    protected $fillable = ['candidate_id', 'title', 'content', 'image', 'is_approved'];
 
     // A post belongs to a candidate
     public function candidate()
