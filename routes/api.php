@@ -62,6 +62,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/candidates/posts/update/{postId}', [PostController::class, 'updatePost']);
     Route::delete('/candidates/posts/delete/{postId}', [PostController::class, 'deletePost']);
     Route::get('/candidate-id/{student_id}', [CandidateController::class, 'getCandidateIdByStudentId']);
+    //posts
+    Route::get('/posts/approved', [PostController::class, 'getApprovedPosts']);
+    Route::get('/posts/approved/{candidateId}', [PostController::class, 'getApprovedPostsByCandidate']);
+
 
 });
 

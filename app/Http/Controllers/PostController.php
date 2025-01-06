@@ -164,4 +164,45 @@ class PostController extends Controller
             'message' => 'Post deleted successfully.',
         ], 200);
     }
+
+    //get approved posts
+    public function getApprovedPosts()
+    {
+        $posts = Post::where('is_approved', true)
+                ->with([
+                    'candidate' => function ($query) {
+                        $query->select('id', 'user_id', 'profile_photo', 'position_id', 'party_list_id')
+                            ->with([
+                                'user:id,name',
+                                'partylist:id,name,description',
+                                'position:id,name'
+                            ]);
+                    }
+                ])
+                ->get();
+
+            return response()->json($posts);
+
+        return response()->json($posts);
+    }
+
+    //get approved posts of a specific candidate
+    public function getApprovedPostsByCandidate($candidateId)
+    {
+        $posts = Post::where('is_approved', true)
+                    ->where('candidate_id', $candidateId)
+                    ->with([
+                        'candidate' => function ($query) {
+                            $query->select('id', 'user_id', 'profile_photo', 'position_id', 'party_list_id')
+                                ->with([
+                                    'user:id,name',
+                                    'partylist:id,name,description',
+                                    'position:id,name'
+                                ]);
+                        }
+                    ])
+                    ->get();
+        return response()->json($posts);
+    }
+
 }
