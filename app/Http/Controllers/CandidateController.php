@@ -7,6 +7,7 @@ use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\Election;
 use App\Models\Position;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,35 @@ use Illuminate\Support\Facades\Storage;
 
 class CandidateController extends Controller
 {
+
+    public function getCandidateIdByStudentId($student_id)
+    {
+        // Retrieve the student record
+        $student = Student::find($student_id);
+
+        // Check if the student exists
+        if (!$student) {
+            return response()->json([
+                'message' => 'Student not found.',
+            ], 404);
+        }
+
+        // Check if the student has an associated candidate
+        $candidate = $student->candidate; // Assuming a relationship exists: Student hasOne Candidate
+
+        if (!$candidate) {
+            return response()->json([
+                'message' => 'No candidate record found for this student.',
+            ], 404);
+        }
+
+        // Return the candidate ID
+        return response()->json([
+            'candidate_id' => $candidate->id,
+        ], 200);
+    }
+
+    
     public function fileCandidacy(CandidacyFileRequest $request)
     {
         // Validate request data
