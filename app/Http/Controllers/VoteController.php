@@ -6,13 +6,120 @@ use App\Models\Vote;
 use App\Models\VoteStatus;
 use App\Models\Candidate;
 use App\Models\Position;
+use App\Models\VoteLogs;
+use App\Models\Election;
+use App\Models\User;
+use App\Models\VoteLog;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class VoteController extends Controller
 {
-    // Function to start the voting process
+    //trial voting code
+    public function castVote(Request $request)
+{
+    $request->validate([
+        'election_id' => 'required|integer|exists:elections,id',
+        //'user_id' => 'required|integer|exists:users,id',
+        'votes' => 'required|array|min:1',
+        'votes.*.position_id' => 'required|integer|exists:positions,id',
+        'votes.*.candidate_id' => 'required|integer|exists:candidates,id',
+    ]);
+
+    $election = Election::findOrFail($request->election_id);
+    $currentDate = Carbon::now();
+
+    // ✅ Check if election is ongoing
+    if ($currentDate->lt($election->election_start_date) || $currentDate->gt($election->election_end_date)) {
+        return response()->json(['message' => 'Voting is closed.'], 403);
+    }
+
+    // ✅ Check if voter exists
+    $user = User::find(Auth::user()->id);
+    if (!$user) {
+        return response()->json(['message' => 'User not found.'], 404);
+    }
+
+    // ✅ Check if user has already voted in this election
+    $voteStatus = VoteStatus::where('user_id', $user->id)
+                            ->where('election_id', $request->election_id)
+                            ->first();
+
+    if ($voteStatus && $voteStatus->has_voted) {
+        return response()->json(['message' => 'You have already voted in this election.'], 403);
+    }
+
+    DB::beginTransaction();
+    try {
+        foreach ($request->votes as $vote) {
+            $positionId = $vote['position_id'];
+            $candidateId = $vote['candidate_id'];
+
+            // ✅ Prevent duplicate votes for the same position
+            $existingVote = Vote::where('user_id', $user->id)
+                                ->where('position_id', $positionId)
+                                ->where('election_id', $request->election_id)
+                                ->exists();
+
+            if ($existingVote) {
+                return response()->json([
+                    'message' => 'You have already voted for this position.'
+                ], 403);
+            }
+
+            // ✅ Save vote record
+            Vote::create([
+                'user_id' => $user->id,
+                'voter_student_id' => $user->student_id,
+                'position_id' => $positionId,
+                'position_name' => Position::find($positionId)->name,
+                'candidate_id' => $candidateId,
+                'candidate_student_id' => Candidate::find($candidateId)->student_id,
+                'candidate_name' => Candidate::find($candidateId)->user->name,
+                'election_id' => $request->election_id,
+            ]);
+        }
+
+        // ✅ Update `vote_statuses` to mark voter as voted
+        if ($voteStatus) {
+            $voteStatus->update([
+                'has_voted' => true,
+                'voted_at' => $currentDate,
+            ]);
+        } else {
+            VoteStatus::create([
+                'user_id' => $user->id,
+                'election_id' => $request->election_id,
+                'voted_at' => $currentDate,
+                'has_voted' => true,
+            ]);
+        }
+
+        DB::commit();
+        return response()->json(['message' => 'Vote successfully cast.'], 201);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Vote failed.',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+    //end of block
+    
+}
+
+
+
+
+
+
+
+
+    /*// Function to start the voting process
     public function startVoting($electionId)
     {
         $userId = Auth::user()->id;
@@ -86,5 +193,4 @@ class VoteController extends Controller
             ->get();
 
         return response()->json(['votes' => $votes]);
-    }
-}
+    }*/

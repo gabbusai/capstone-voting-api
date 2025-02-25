@@ -113,6 +113,7 @@ class ElectionController extends Controller
             ->map(function ($position) {
                 return [
                     'position' => $position->name,
+                    'position_id' => $position->id,
                     'candidates' => $position->candidates->map(function ($candidate) {
                         return [
                             'id' => $candidate->id,
@@ -208,5 +209,5 @@ class ElectionController extends Controller
         ], 200);
     }
 
-    public function SubmitVote(VoteRequest $request) {}
+    
 }

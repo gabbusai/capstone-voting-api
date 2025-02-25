@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class VoteStatus extends Model
 {
     protected $table = 'vote_statuses';
-
+    protected $fillable = ['user_id', 'election_id', 'voted_at', 'has_voted' ];
     public function user()
     {
         return $this->belongsTo(User::class); // Link to User model

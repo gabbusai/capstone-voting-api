@@ -15,8 +15,6 @@ return new class extends Migration
             $table->id(); // Vote status ID
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Foreign key to Students table
             $table->foreignId('election_id')->constrained('elections')->onDelete('cascade'); // Foreign key to Elections table
-            $table->dateTime('start_time')->nullable(); // Time when voting starts
-            $table->dateTime('end_time')->nullable(); // Time when voting ends
             $table->date('voted_at')->nullable(); // Date of when the vote was cast
             $table->boolean('has_voted')->default(false); // Flag indicating if the student has voted
             $table->timestamps();

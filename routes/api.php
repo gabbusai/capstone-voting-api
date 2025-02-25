@@ -7,6 +7,7 @@ use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\VoteController;
 use App\Models\Candidate;
 use App\Models\Election;
 use Illuminate\Http\Request;
@@ -66,6 +67,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/posts/approved', [PostController::class, 'getApprovedPosts']);
     Route::get('/posts/approved/{candidateId}', [PostController::class, 'getApprovedPostsByCandidate']);
 
+
+    //votes
+    Route::post('/vote/cast', [VoteController::class, 'castVote']);
 
 });
 
