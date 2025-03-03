@@ -58,7 +58,7 @@ class PostController extends Controller
     // Fetch a specific post
     public function getPost($id)
     {
-        $post = Post::find($id);
+        $post = Post::with('candidate.user', 'candidate.position', 'candidate.partylist', 'candidate.department')->find($id);
 
         if (!$post) {
             return response()->json(['message' => 'Post not found.'], 404);
@@ -204,5 +204,7 @@ class PostController extends Controller
                     ->get();
         return response()->json($posts);
     }
+
+
 
 }

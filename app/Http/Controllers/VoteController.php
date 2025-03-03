@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Vote;
 use App\Models\VoteStatus;
 use App\Models\Candidate;
+use App\Models\Department;
 use App\Models\Position;
 use App\Models\VoteLogs;
 use App\Models\Election;
@@ -108,8 +109,76 @@ class VoteController extends Controller
     }
 }
 
+
+public function getElectionDetails($electionId)
+{
+    $user = Auth::user();
+
+    // Fetch election with candidates and their positions
+    $election = Election::with(['candidates.position'])->find($electionId);
+    $department = Department::find($election->department_id);
+
+    if (!$election) {
+        return response()->json(['message' => 'Election not found'], 404);
+    }
+
+    // Check if the user has voted in this election
+    $userVotes = Vote::where('user_id', $user->id)->where('election_id', $electionId)->get();
+    $hasVoted = $userVotes->isNotEmpty();
+
+    // Map user votes to positions
+    $userVoteDetails = [];
+    if ($hasVoted) {
+        foreach ($userVotes as $vote) {
+            $candidate = Candidate::with('position')->find($vote->candidate_id);
+            $userVoteDetails[] = [
+                'position_id' => $vote->position_id,
+                'position_name' => $candidate ? $candidate->position->name : 'Unknown',
+                'candidate_id' => $vote->candidate_id,
+                'candidate_name' => $candidate ? $candidate->student->name : 'Abstained',
+            ];
+        }
+    }
+
+    // Group candidates by position
+    $positions = [];
+    foreach ($election->candidates as $candidate) {
+        $positionId = $candidate->position_id;
+        if (!isset($positions[$positionId])) {
+            $positions[$positionId] = [
+                'id' => $candidate->position->id,
+                'name' => $candidate->position->name,
+                'candidates' => []
+            ];
+        }
+        $positions[$positionId]['candidates'][] = [
+            'id' => $candidate->id,
+            'name' => $candidate->user->name,
+            'profile_photo' => $candidate->profile_photo,
+            'party_list_id' => $candidate->party_list_id,
+        ];
+    }
+
+    return response()->json([
+        'election' => [
+            'id' => $election->id,
+            'election_type_id' => $election->election_type_id,
+            'department_id' => $election->department_id,
+            'department' => $department->name,
+            'name' => $election->election_name,
+            'campaign_start_date' => $election->campaign_start_date,
+            'campaign_end_date' => $election->campaign_end_date,
+            'election_start_date' => $election->election_start_date,
+            'election_end_date' => $election->election_end_date,
+            'status' => $election->status,
+            'positions' => array_values($positions), // Convert associative array to indexed array
+        ],
+        'hasVoted' => $hasVoted,
+        'userVoteDetails' => $hasVoted ? $userVoteDetails : null,
+    ]);
+}
+
     //end of block
-    
 }
 
 

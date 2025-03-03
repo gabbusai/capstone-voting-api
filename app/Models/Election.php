@@ -28,4 +28,9 @@ class Election extends Model
     {
         return $this->hasMany(Candidate::class); // One Election can have many Candidates
     }
+
+    public function positions()
+    {
+        return $this->hasMany(Position::class, 'election_id');
+    }
 }

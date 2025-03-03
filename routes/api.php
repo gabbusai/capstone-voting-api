@@ -70,6 +70,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //votes
     Route::post('/vote/cast', [VoteController::class, 'castVote']);
+    Route::get('/votes/election/{id}', [VoteController::class, 'getElectionDetails']);
 
 });
 
