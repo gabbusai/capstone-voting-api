@@ -178,6 +178,81 @@ public function getElectionDetails($electionId)
     ]);
 }
 
+    //get election results
+    public function getElectionResults($electionId)
+    {
+        // Fetch the election details
+        $election = Election::with(['candidates.position', 'candidates.partylist'])->find($electionId);
+
+        if (!$election) {
+            return response()->json(['message' => 'Election not found'], 404);
+        }
+
+        // Fetch all candidates and count votes per candidate
+        $tallies = Vote::where('election_id', $electionId)
+            ->selectRaw('candidate_id, COUNT(*) as vote_count')
+            ->groupBy('candidate_id')
+            ->get()
+            ->keyBy('candidate_id'); // Key the results by candidate_id for easy lookup
+
+        // Organize results by position
+        $results = [];
+        foreach ($election->candidates as $candidate) {
+            $positionId = $candidate->position->id;
+            $positionName = $candidate->position->name;
+
+            if (!isset($results[$positionId])) {
+                $results[$positionId] = [
+                    'position_id' => $positionId,
+                    'position_name' => $positionName,
+                    'candidates' => [],
+                    'winners' => [] // Adjusted to allow multiple winners
+                ];
+            }
+
+            $voteCount = $tallies[$candidate->id]->vote_count ?? 0;
+
+            $results[$positionId]['candidates'][] = [
+                'candidate_id' => $candidate->id,
+                'name' => $candidate->user->name ?? 'Unknown',
+                'profile_photo' => $candidate->profile_photo ?? null,
+                'partylist' => $candidate->partylist->name ?? 'Independent',
+                'votes' => $voteCount
+            ];
+        }
+
+        // Determine winners (including ties and no-vote handling)
+        foreach ($results as &$position) {
+            if (empty($position['candidates'])) {
+                $position['winners'] = ['No candidates for this position'];
+                continue;
+            }
+
+            // Sort candidates by votes in descending order
+            $position['candidates'] = collect($position['candidates'])->sortByDesc('votes')->values();
+
+            // Check if votes exist
+            if ($position['candidates'][0]['votes'] === 0) {
+                $position['winners'] = ['No votes received for this position'];
+            } else {
+                $highestVote = $position['candidates'][0]['votes'];
+                $position['winners'] = $position['candidates']->filter(function ($candidate) use ($highestVote) {
+                    return $candidate['votes'] === $highestVote;
+                })->values();
+            }
+        }
+
+        return response()->json([
+            'election' => [
+                'id' => $election->id,
+                'name' => $election->election_name,
+                'status' => $election->status
+            ],
+            'results' => array_values($results) // Ensure clean JSON response
+        ]);
+    }
+
+
     //end of block
 }
 

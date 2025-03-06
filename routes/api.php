@@ -71,6 +71,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //votes
     Route::post('/vote/cast', [VoteController::class, 'castVote']);
     Route::get('/votes/election/{id}', [VoteController::class, 'getElectionDetails']);
+    //results
+    Route::get('/election/{id}/results', [VoteController::class, 'getElectionResults']);
+
 
 });
 
