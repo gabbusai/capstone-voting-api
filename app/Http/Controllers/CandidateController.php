@@ -6,6 +6,7 @@ use App\Http\Requests\CandidacyFileRequest;
 use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\Election;
+use App\Models\PartyList;
 use App\Models\Position;
 use App\Models\Student;
 use App\Models\User;
@@ -111,12 +112,12 @@ class CandidateController extends Controller
 
     public function getAllCandidates()
     {
-        $candidates = Candidate::with(['user', 'election'])->get();
+        $candidates = Candidate::with(['user', 'election', 'department', 'partylist', 'position'])->get();
         return response()->json($candidates);
     }
 
     public function getAllPositions(){
-        $positions = Position::all();
+        $positions = Position::with(['department'])->get();
         return response()->json($positions);
     }
 
@@ -166,6 +167,15 @@ public function uploadProfilePhoto(Request $request, $candidateId)
 
     return response()->json(['message' => 'No file uploaded.'], 400);
 }
+
+
+    public function getAllPartylist(){
+        $partylist = PartyList::with(['candidates'])->get();
+
+
+        return response()->json($partylist);
+    }
+
 
     
 }

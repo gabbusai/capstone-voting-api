@@ -117,9 +117,27 @@ class AuthController extends Controller
             if ($user->device_id !== $request->device_id) {
                 return $this->error('', 'Login not allowed on this device', 403);
             }
+
+            if($user->role_id == 3){
+                // Generate a random OTP token
+                $otpToken = Str::random(6); // Generate a 6-character OTP
+                $expiresAt = Carbon::now()->addDays(30); // Set expiration time to 30 minutes
+            
+                // Store the OTP token in the token_o_t_p_s table with an expiration time
+                TokenOtp::create([
+                    'user_id' => $user->id,
+                    'tokenOTP' => $otpToken,
+                    'expires_at' => $expiresAt, // OTP expires in 30 minutes
+                    'used' => false, // OTP is not yet used
+                ]);
+            
+                // Send the OTP token to the user's email via a Mailable class
+                Mail::to($user->email)->send(new SendOTP($user, $otpToken));
+            }
     
             return $this->success([
                 'user' => $user,
+                
             ], 'User already logged in from this device', 200);
         }
     

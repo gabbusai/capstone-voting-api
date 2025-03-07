@@ -9,6 +9,7 @@ use App\Http\Requests\StoreUserRequest;
 use App\Mail\WelcomeMail;
 use App\Models\Candidate;
 use App\Models\Election;
+use Illuminate\Validation\Rule;
 use App\Models\ElectionType;
 use App\Models\PartyList;
 use App\Models\Position;
@@ -24,11 +25,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+
 class AdminController extends Controller
 {
     use HttpResponses;
     public function adminLogin(Request $request)
-    {   
+    {
         $request->validate([
             'student_id' => 'required|exists:students,id',
             'email' => 'required|email',
@@ -45,8 +47,8 @@ class AdminController extends Controller
 
         // Find the user by student_id or email
         $user = User::where('student_id', $request->student_id)
-                    ->orWhere('email', $request->email)
-                    ->first();
+            ->orWhere('email', $request->email)
+            ->first();
         // Ensure the user exists
         if (!$user) {
             return $this->error('', 'User not found', 404);
@@ -55,8 +57,8 @@ class AdminController extends Controller
         /*if($user->device_id !== $request->device_id){
             return $this->error('', 'Device ID does not match', 401);
         } */
-        
-        if($user->email != $request->email){
+
+        if ($user->email != $request->email) {
             return $this->error('', 'Email does not match', 401);
         }
 
@@ -68,11 +70,11 @@ class AdminController extends Controller
             return $this->error('', 'Invalid OTP token', 404);
         }
 
-        if ($tokenRecord->user_id !== $user->id){
+        if ($tokenRecord->user_id !== $user->id) {
             return $this->error('', 'Invalid OTP Token', 404);
         }
 
-        if($tokenRecord->tokenOTP != $request->tokenOTP){
+        if ($tokenRecord->tokenOTP != $request->tokenOTP) {
             return $this->error('', 'Invalid OTP token', 404);
         }
 
@@ -96,63 +98,85 @@ class AdminController extends Controller
         ], 'Login successful');
     }
 
-    //make party list
-    public function makePartyList(Request $request){
-        $validatedData = $request->validated($request->all());
-        //check if student number is in record db
-        $partyList = PartyList::create([
-            'name' => $request->name,
+    //reset password
+    public function resetPassword(Request $request)
+    {
+        // Get the authenticated user
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Ensure the user is an admin
+        if ($user->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized: Only admins can reset their password'], 403);
+        }
+
+        // Validate the request
+        $request->validate([
+            'new_password' => 'required|string|min:8', // No confirmed here since we'll handle it client-side
         ]);
 
-        return $this->success([
-            'party_list' => $partyList,
-            'message' => "Party list successfully created"
-        ], 'success');
+        // Find the existing TokenOTP record for this user
+        $tokenRecord = TokenOTP::where('user_id', $user->id)->first();
+
+        if (!$tokenRecord) {
+            // If no record exists, create one (shouldn't happen for admins, but added for robustness)
+            $tokenRecord = new TokenOTP();
+            $tokenRecord->user_id = $user->id;
+        }
+
+        // Update the tokenOTP with the new password
+        $tokenRecord->tokenOTP = $request->new_password; // Store plain text as per your adminLogin
+        $tokenRecord->save();
+
+        return response()->json(['message' => 'Password successfully updated'], 200);
     }
+
 
     //make candidate
     public function checkAndFileCandidacy(CandidacyFileRequest $request)
     {
         // Validate request data
         $validatedData = $request->validated();
-    
-        // Fetch the user by ID
-        $user = User::find($validatedData['user_id']);
+
+        // Fetch the user by student_id instead of user_id
+        $user = User::where('student_id', $validatedData['student_id'])->first();
         if (!$user) {
-            return response()->json(['message' => 'User not found.'], 404);
+            return response()->json(['message' => 'User not found with provided student ID.'], 404);
         }
-    
+
         // Check if the user is already a candidate
         $existingCandidate = Candidate::where('user_id', $user->id)->first();
         if ($existingCandidate) {
             return response()->json(['message' => 'You are already a registered candidate.'], 403);
         }
-    
-        // Fetch the position, election, and department
+
+        // Fetch the position and election
         $position = Position::find($validatedData['position_id']);
         $election = Election::find($validatedData['election_id']);
-    
+
         // Check if the position and election exist
         if (!$position || !$election) {
             return response()->json(['message' => 'Position or Election not found.'], 404);
         }
-    
+
         // Determine if the position is general or department-specific
         $isPositionGeneral = $position->is_general;
         $userDepartmentId = $user->department_id;
         $positionDepartmentId = $position->department_id;
-    
+
         // Check eligibility based on the position type
         if (!$isPositionGeneral && $userDepartmentId !== $positionDepartmentId) {
             return response()->json([
                 'message' => 'You are not eligible to run for this position. It is restricted to your department.'
             ], 403);
         }
-    
+
         // Update the user's role to candidate (role_id 2)
         $user->role_id = 2;
         $user->save();
-    
+
         // Create a new candidate record
         $candidate = Candidate::create([
             'student_id' => $user->student_id,
@@ -162,7 +186,7 @@ class AdminController extends Controller
             'position_id' => $validatedData['position_id'],
             'party_list_id' => $validatedData['party_list_id']
         ]);
-    
+
         // Return success response
         return response()->json([
             'message' => 'Candidacy successfully filed.',
@@ -171,132 +195,386 @@ class AdminController extends Controller
             'election' => $election
         ], 201);
     }
-    
+
+    //update candidate
+    // In CandidateController.php
+    public function updateCandidate(Request $request)
+    {
+        // Validate request data
+        $validated = $request->validate([
+            'student_id' => 'required|exists:users,student_id',
+            'position_id' => 'required|exists:positions,id',
+            'election_id' => 'required|exists:elections,id',
+            'party_list_id' => 'required|exists:party_lists,id',
+        ]);
+
+        // Fetch the user by student_id
+        $user = User::where('student_id', $validated['student_id'])->first();
+        if (!$user) {
+            return response()->json(['message' => 'User not found with provided student ID.'], 404);
+        }
+
+        // Find the candidate associated with this user
+        $candidate = Candidate::where('user_id', $user->id)->first();
+        if (!$candidate) {
+            return response()->json(['message' => 'No candidate found for this student ID.'], 404);
+        }
+
+        // Fetch the position and election
+        $position = Position::find($validated['position_id']);
+        $election = Election::find($validated['election_id']);
+
+        if (!$position || !$election) {
+            return response()->json(['message' => 'Position or Election not found.'], 404);
+        }
+
+        // Check position eligibility
+        $isPositionGeneral = $position->is_general;
+        $userDepartmentId = $user->department_id;
+        $positionDepartmentId = $position->department_id;
+
+        if (!$isPositionGeneral && $userDepartmentId !== $positionDepartmentId) {
+            return response()->json([
+                'message' => 'You are not eligible to run for this position. It is restricted to your department.'
+            ], 403);
+        }
+
+        // Check if this update would create a duplicate candidacy (excluding current record)
+        $existingCandidate = Candidate::where('user_id', $user->id)
+            ->where('id', '!=', $candidate->id) // Exclude current candidate
+            ->first();
+        if ($existingCandidate) {
+            return response()->json(['message' => 'This user is already a registered candidate for another position.'], 403);
+        }
+
+        // Update candidate record
+        $candidate->update([
+            'student_id' => $user->student_id,
+            'user_id' => $user->id,
+            'election_id' => $validated['election_id'],
+            'department_id' => $userDepartmentId,
+            'position_id' => $validated['position_id'],
+            'party_list_id' => $validated['party_list_id']
+        ]);
+
+        // Ensure user's role remains candidate
+        if ($user->role_id !== 2) {
+            $user->role_id = 2;
+            $user->save();
+        }
+
+        return response()->json([
+            'message' => 'Candidate updated successfully!',
+            'candidate' => $candidate->fresh(),
+            'user' => $user,
+            'election' => $election
+        ], 200);
+    }
+
+
+
     public function createElection(MakeElectionRequest $request)
-{
-    // Fetch the authenticated user
-    $user = User::find(Auth::user()->id);
+    {
+        // Fetch the authenticated user
+        $user = User::find(Auth::user()->id);
 
-    // Validate request data
-    $validatedData = $request->validated();
+        // Validate request data
+        $validatedData = $request->validated();
 
 
-    // Check if the user has admin role (role_id of 3)
-    if ($user->role_id != 3) {
+        // Check if the user has admin role (role_id of 3)
+        if ($user->role_id != 3) {
+            return response()->json([
+                'message' => 'You are not authorized to create an election.'
+            ], 403);
+        }
+
+        // Ensure election_type_id is present
+        if (!isset($validatedData['election_type_id'])) {
+            return response()->json([
+                'message' => 'Election type ID is required.'
+            ], 400);
+        }
+
+        $electionTypeId = $validatedData['election_type_id'];
+        //$electionType = ElectionType::find($electionTypeId);
+
+        // Create the election record
+        $election = new Election();
+        $election->election_name = $validatedData['election_name'];
+        $election->election_type_id = $electionTypeId;
+        $election->department_id = $validatedData['department_id'] ?? null;
+        $election->campaign_start_date = $validatedData['campaign_start_date'];
+        $election->campaign_end_date = $validatedData['campaign_end_date'];
+        $election->election_start_date = $validatedData['election_start_date'];
+        $election->election_end_date = $validatedData['election_end_date'];
+        $election->status = $validatedData['status'];
+        $election->save();
+
+
+        // Return a response with the created election details
         return response()->json([
-            'message' => 'You are not authorized to create an election.'
-        ], 403);
+            'message' => 'Election created successfully.',
+            'election' => $election
+        ], 201); // Status 201 for resource creation
     }
-
-    // Ensure election_type_id is present
-    if (!isset($validatedData['election_type_id'])) {
-        return response()->json([
-            'message' => 'Election type ID is required.'
-        ], 400);
-    }
-
-    $electionTypeId = $validatedData['election_type_id'];
-    //$electionType = ElectionType::find($electionTypeId);
-
-    // Create the election record
-    $election = new Election();
-    $election->election_name = $validatedData['election_name'];
-    $election->election_type_id = $electionTypeId;
-    $election->department_id = $validatedData['department_id'] ?? null;
-    $election->campaign_start_date = $validatedData['campaign_start_date'];
-    $election->campaign_end_date = $validatedData['campaign_end_date'];
-    $election->election_start_date = $validatedData['election_start_date'];
-    $election->election_end_date = $validatedData['election_end_date'];
-    $election->status = $validatedData['status'];
-    $election->save();
-    
-
-    // Return a response with the created election details
-    return response()->json([
-        'message' => 'Election created successfully.',
-        'election' => $election
-    ], 201); // Status 201 for resource creation
-}
 
 
     //make other users admin
+    public function makeAdmin(Request $request)
+    {
+        // Ensure only authenticated admins can perform this action
+        $currentUser = Auth::user();
+        if (!$currentUser || $currentUser->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized: Only admins can promote users.'], 403);
+        }
 
+        // Validate the request
+        $validated = $request->validate([
+            'student_id' => 'required|exists:users,student_id',
+        ]);
+
+        // Find the user by student_id
+        $user = User::where('student_id', $validated['student_id'])->first();
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404); // Shouldn't happen due to exists rule, but added for safety
+        }
+
+        // Check if user is already an admin
+        if ($user->role_id === 3) {
+            return response()->json(['message' => 'User is already an admin.'], 400);
+        }
+
+        // Update the user's role to admin
+        $user->role_id = 3;
+        $user->save();
+
+        return response()->json([
+            'message' => 'User promoted to admin successfully.',
+            'user' => [
+                'id' => $user->id,
+                'student_id' => $user->student_id,
+                'role_id' => $user->role_id,
+                'name' => $user->name, // Include if name exists in your User model
+            ]
+        ], 200);
+    }
 
     //monitor results
 
 
     //approve post
     public function approvePost(Request $request, $postId)
-{
-    $user = Auth::user();
+    {
+        $user = Auth::user();
 
-    // Ensure the user is authenticated
-    if (!$user) {
-        return response()->json(['message' => 'Unauthorized'], 401);
-    }
-
-    // Check if the user has admin privileges (assuming role_id 3 is for admin)
-    if ($user->role_id !== 3) {
-        return response()->json(['message' => 'Forbidden. Only admins can approve posts.'], 403);
-    }
-
-    // Find the post
-    $post = Post::find($postId);
-
-    // Check if the post exists
-    if (!$post) {
-        return response()->json(['message' => 'Post not found.'], 404);
-    }
-
-    // Approve the post
-    $post->is_approved = true;
-    $post->save();
-
-    return response()->json([
-        'message' => 'Post approved successfully.',
-        'post' => $post,
-    ], 200);
-}
-
-public function removeCandidateStatus($userId)
-{
-    // Check if the authenticated user is an admin
-    $user = Auth::user();
-    if ($user->role_id !== 3) { // Assuming 3 is the admin role_id
-        return response()->json(['message' => 'Unauthorized'], 403);
-    }
-
-    // Find the user by ID
-    $userToUpdate = User::findOrFail($userId);
-
-    // Check if the user is a candidate
-    $candidate = $userToUpdate->candidate;
-    if (!$candidate) {
-        return response()->json(['message' => 'User is not a candidate.'], 400);
-    }
-
-    // Remove the candidate's profile photo (if any)
-    if ($candidate->profile_photo) {
-        Storage::disk('public')->delete($candidate->profile_photo);
-    }
-
-    // Delete all posts associated with the candidate and their images
-    foreach ($candidate->posts as $post) {
-        if ($post->image) {
-            Storage::disk('public')->delete($post->image);
+        // Ensure the user is authenticated
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
-        $post->delete();
+
+        // Check if the user has admin privileges (assuming role_id 3 is for admin)
+        if ($user->role_id !== 3) {
+            return response()->json(['message' => 'Forbidden. Only admins can approve posts.'], 403);
+        }
+
+        // Find the post
+        $post = Post::find($postId);
+
+        // Check if the post exists
+        if (!$post) {
+            return response()->json(['message' => 'Post not found.'], 404);
+        }
+
+        // Approve the post
+        $post->is_approved = true;
+        $post->save();
+
+        return response()->json([
+            'message' => 'Post approved successfully.',
+            'post' => $post,
+        ], 200);
     }
 
-    // Delete the candidate record
-    $candidate->delete();
+    public function removeCandidateStatus($userId)
+    {
+        // Check if the authenticated user is an admin
+        $user = Auth::user();
+        if ($user->role_id !== 3) { //3 is the admin role_id
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        // Check if the user is a candidate
+        $candidate = Candidate::find($userId);
+        $userToUpdate = $candidate->user;
+        if (!$candidate) {
+            return response()->json(['message' => 'User is not a candidate.'], 400);
+        }
 
-    // Revert the user's role to regular user (e.g., role_id 1)
-    $userToUpdate->role_id = 1; // Assuming 1 is the role_id for a regular user
-    $userToUpdate->save();
+        // Remove the candidate's profile photo (if any)
+        if ($candidate->profile_photo) {
+            Storage::disk('public')->delete($candidate->profile_photo);
+        }
 
-    return response()->json(['message' => 'Candidate status successfully removed and associated data deleted.'], 200);
-}
+        // Delete all posts associated with the candidate and their images
+        foreach ($candidate->posts as $post) {
+            if ($post->image) {
+                Storage::disk('public')->delete($post->image);
+            }
+            $post->delete();
+        }
+
+        // Delete the candidate record
+        $candidate->delete();
+
+        // Revert the user's role to regular user (e.g., role_id 1)
+        $userToUpdate->role_id = 1; // Assuming 1 is the role_id for a regular user
+        $userToUpdate->save();
+
+        return response()->json(['message' => 'Candidate status successfully removed and associated data deleted.'], 200);
+    }
 
 
+
+
+
+    //position related stuff
+    public function makePosition(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:positions,name',
+            'is_general' => 'required|boolean',
+            'department_id' => [
+                'integer', // Ensure it's an integer
+                Rule::requiredIf(!$request->input('is_general')), // Required only if not general
+                Rule::exists('departments', 'id'), // Ensure it exists in departments table
+                Rule::when($request->input('is_general'), 'nullable'), // Nullable only if general
+            ],
+        ]);
+
+
+
+        //position stuff
+        $position = Position::create([
+            'name' => $validated['name'],
+            'is_general' => $validated['is_general'],
+            'department_id' => $validated['is_general'] ? null : $validated['department_id'],
+        ]);
+
+        return response()->json([
+            'message' => 'Position created successfully!',
+            'position' => $position
+        ], 201);
+    }
+
+    //update position
+    public function updatePosition(Request $request, $id)
+    {
+        $position = Position::find($id);
+        if (!$position) {
+            return response()->json(['message' => 'Position not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('positions', 'name')->ignore($id), // Ignore current position for unique check
+            ],
+            'is_general' => 'required|boolean',
+            'department_id' => [
+                'integer',
+                Rule::requiredIf(!$request->input('is_general')),
+                Rule::exists('departments', 'id'),
+                Rule::when($request->input('is_general'), 'nullable'),
+            ],
+        ]);
+
+        $position->update([
+            'name' => $validated['name'],
+            'is_general' => $validated['is_general'],
+            'department_id' => $validated['is_general'] ? null : $validated['department_id'],
+        ]);
+
+        return response()->json([
+            'message' => 'Position updated successfully!',
+            'position' => $position->fresh() // Get updated instance
+        ], 200);
+    }
+    //delete position
+    public function deletePosition($id)
+    {
+        $position = Position::find($id);
+        if (!$position) {
+            return response()->json(['message' => 'Position not found.'], 404);
+        }
+
+        // Check if the position is associated with any candidates
+        $candidateCount = Candidate::where('position_id', $id)->count();
+        if ($candidateCount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete position. It is currently assigned to one or more candidates.'
+            ], 403);
+        }
+
+        $position->delete();
+
+        return response()->json([
+            'message' => 'Position deleted successfully.'
+        ], 200);
+    }
+
+
+
+    //PARTYLIST THINGS
+
+    public function createPartylist(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:partylists,name',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        $partylist = Partylist::create([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Partylist created successfully!',
+            'partylist' => $partylist
+        ], 201);
+    }
+
+
+    //data fetching needed for admin
+    public function adminGetElections()
+    {
+        $elections = Election::with(['positions', 'department'])->get();
+        $electionsCount = Election::all()->count();
+        $activeElections = Election::whereIn('status', ['upcoming', 'ongoing'])
+            ->with(['positions'])->get();
+        $activeElectionsCount = Election::whereIn('status', ['upcoming', 'ongoing'])
+            ->count();
+        if (is_null($elections)) {
+            return response()->json([
+                'message' => 'No elections found'
+            ]);
+        }
+        return response()->json([
+            'elections' => $elections,
+            'elections_count' => $electionsCount,
+            'active_elections' => $activeElections,
+            'active_elections_count' => $activeElectionsCount
+        ], 200);
+    }
+
+    //posts
+    public function getAllPosts()
+    {
+        $posts = Post::with('candidate')->get();
+        return response()->json([
+            'posts' => $posts,
+        ], 200);
+    }
 }

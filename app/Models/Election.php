@@ -31,6 +31,6 @@ class Election extends Model
 
     public function positions()
     {
-        return $this->hasMany(Position::class, 'election_id');
+        return $this->hasMany(Position::class);
     }
 }

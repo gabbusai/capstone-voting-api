@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->foreignId('department_id')->nullable()->constrained('departments')->onDelete('cascade');
-            $table->boolean('is_general');
+            $table->boolean('is_general')->default(0);
+            $table->timestamps();
         });
     }
 

@@ -53,13 +53,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/elections/{electionId}/positions', [ElectionController::class, 'getPositionsForElection'])->name('api.getPositionsOfElection');
     Route::get('/elections/{electionId}', [ElectionController::class, 'getAnElection'])->name('api.getAnElection');
     Route::get('/elections', [ElectionController::class, 'getAllElections'])->name('api.getAllElections');
-
+    Route::get('/partylists/all', [CandidateController::class, 'getAllPartylist'])->name('api.getAllPartyList');
 
     //candidate pfp and posts
     Route::post('/candidates/{candidateId}/upload-photo', [CandidateController::class, 'uploadProfilePhoto']);
     Route::post('/candidates/posts/upload', [PostController::class, 'createPost']);
     Route::get('/candidates/posts/{id}', [PostController::class, 'getPost']);
-    Route::get('/candidates/posts/all', [PostController::class, 'getAllPosts']);
     Route::put('/candidates/posts/update/{postId}', [PostController::class, 'updatePost']);
     Route::delete('/candidates/posts/delete/{postId}', [PostController::class, 'deletePost']);
     Route::get('/candidate-id/{student_id}', [CandidateController::class, 'getCandidateIdByStudentId']);
@@ -80,17 +79,42 @@ Route::middleware(['auth:sanctum'])->group(function () {
 //ADMIN ONLY ROUTES
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/election/registered', [ElectionController::class, 'getAllRegistered'])->name('api.getAllRegistered');
-    Route::post('/file-candidate', [CandidateController::class, 'fileCandidacy'])->name('api.fileCandidacy');
+    Route::post('/file-candidate', [CandidateController::class, 'fileCandidacy'])->name('api.fileCandidacy'); // di to gagamitin
     Route::get('/candidates/position/{electionId}/{positionId}', [
         StudentController::class,
         'getCandidatesByPosition'
     ])->name('api.getCandidatesByPosition');
-    Route::post('/elections/make', [AdminController::class, 'createElection'])->name('api.createElection');
 
-    Route::post('/verify-make-candidate', [AdminController::class, 'checkAndFileCandidacy'])->name('api.checkAndFileCandidacy');
+    //data needed by admin for their bs ahh dashboard
+    Route::post('/admin/reset-password', [AdminController::class,'resetPassword']);
+    Route::post('/admin/make-admin', [AdminController::class, 'makeAdmin']);
+    Route::get('/admin/elections/all', [AdminController::class, 'adminGetElections']); // not working sadge pinagsamang elections with other useful data
+
+
+    //make and edit elections
+    Route::post('/elections/make', [AdminController::class, 'createElection'])->name('api.createElection'); //done
+    
+
+    //make and edit candidate
+    Route::post('/verify-make-candidate', [AdminController::class, 'checkAndFileCandidacy'])->name('api.checkAndFileCandidacy'); //eto talaga dapat
+    Route::put('/edit-candidate', [AdminController::class, 'updateCandidate']);
+    
+
+    //monitor and administrate posts
     Route::post('/posts/{postId}/approve', [AdminController::class, 'approvePost'])->name('api.approvePost');
     Route::delete('/admin/remove-candidate/{userId}', [AdminController::class, 'removeCandidateStatus']);
 
+    //make and edit position
+    Route::post('/positions-make', [AdminController::class, 'makePosition']); //done 
+    Route::put('/positions/{id}', [AdminController::class, 'updatePosition']); //done 
+    Route::delete('/positions-delete/{id}', [AdminController::class, 'deletePosition']); //done 
+
+    //make and edit partylist
+    Route::post('/partylist-make', [AdminController::class, 'createPartylist']);
+
+    //posts
+    Route::get('/admin/posts/all', [PostController::class, 'getAllPosts']);
+    
 });
 //CANDIDATE ONLY ROUTES
 
@@ -99,5 +123,5 @@ Route::post('/candidacy/test/{userId}/{positionId}', [
     StudentController::class,
     'testFileForCandidacy'
 ])->name('api.testFileForCandidacy');
-Route::get('/candidates/all', [CandidateController::class, 'getAllCandidates'])->name('api.getCandidates');
+Route::get('/candidate/all', [CandidateController::class, 'getAllCandidates'])->name('api.getCandidates');
 Route::get('/positions/all', [CandidateController::class, 'getAllPositions'])->name('api.getPositions');

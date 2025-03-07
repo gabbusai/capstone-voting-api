@@ -9,7 +9,7 @@ class Position extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'department_id', 'is_general'];
 
     // A position has many candidates
     public function candidates()
