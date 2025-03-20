@@ -9,6 +9,7 @@ class PartyList extends Model
 {
     use HasFactory;
 
+    protected $table = 'party_lists';
     protected $fillable = ['name', 'description'];
 
     // A party list has many candidates

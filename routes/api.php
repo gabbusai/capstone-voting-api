@@ -101,7 +101,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     
 
     //monitor and administrate posts
-    Route::post('/posts/{postId}/approve', [AdminController::class, 'approvePost'])->name('api.approvePost');
+    Route::put('/admin/posts/{postId}/approve', [AdminController::class, 'approvePost'])->name('api.approvePost');
     Route::delete('/admin/remove-candidate/{userId}', [AdminController::class, 'removeCandidateStatus']);
 
     //make and edit position
@@ -114,6 +114,13 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     //posts
     Route::get('/admin/posts/all', [AdminController::class, 'getAllPostsAdmin']);
+
+    //department stuff
+    Route::get('admin/departments/all', [AdminController::class, 'listDepartmentsAdmin']);
+    Route::get('admin/departments/{id}', [AdminController::class, 'getDepartmentAdmin']);
+    Route::post('admin/departments/', [AdminController::class, 'createDepartment']);
+    Route::put('admin/departments/', [AdminController::class, 'updateDepartment']);
+    Route::delete('admin/departments/{id}', [AdminController::class, 'deleteDepartment']);
     
 });
 //CANDIDATE ONLY ROUTES

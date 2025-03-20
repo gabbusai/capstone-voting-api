@@ -8,6 +8,7 @@ use App\Http\Requests\MakeElectionRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Mail\WelcomeMail;
 use App\Models\Candidate;
+use App\Models\Department;
 use App\Models\Election;
 use Illuminate\Validation\Rule;
 use App\Models\ElectionType;
@@ -525,13 +526,11 @@ class AdminController extends Controller
     }
 
 
-
-    //PARTYLIST THINGS
-
+    //MAKE PARTYLIST
     public function createPartylist(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:partylists,name',
+            'name' => 'required|string|max:255|unique:party_lists,name', // Updated table name in unique rule
             'description' => 'nullable|string|max:500',
         ]);
 
@@ -545,7 +544,6 @@ class AdminController extends Controller
             'partylist' => $partylist
         ], 201);
     }
-
 
     //data fetching needed for admin
     public function adminGetElections()
@@ -602,4 +600,164 @@ class AdminController extends Controller
             ],
         ], 200);
     }
+
+
+
+    //department stuff
+    public function listDepartmentsAdmin()
+    {
+        $departments = Department::withCount([
+            'students', // Total students in the department
+            'students as registered_count' => function ($query) {
+                $query->whereHas('user'); // Students with a user instance
+            }
+        ])->get();
+
+        $data = $departments->map(function ($department) {
+            return [
+                'id' => $department->id,
+                'name' => $department->name,
+                'student_count' => $department->students_count,
+                'registered_count' => $department->registered_count,
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Departments retrieved successfully',
+            'departments' => $data,
+        ], 200);
+    }
+
+    /**
+     * Get specific department by ID with student details
+     */
+    public function getDepartmentAdmin($id)
+    {
+        $department = Department::with(['students' => function ($query) {
+            $query->select('id', 'name', 'department_id')
+                  ->with(['user' => function ($query) {
+                      $query->select('id', 'student_id');
+                  }]);
+        }])->find($id);
+
+        if (!$department) {
+            return response()->json(['message' => 'Department not found'], 404);
+        }
+
+        $students = $department->students->map(function ($student) {
+            return [
+                'student_id' => $student->id,
+                'name' => $student->name,
+                'is_registered' => !is_null($student->user), 
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Department retrieved successfully',
+            'department' => [
+                'id' => $department->id,
+                'name' => $department->name,
+                'students' => $students,
+            ],
+        ], 200);
+    }
+
+    /**
+     * Create a new department
+     */
+    public function createDepartment(Request $request)
+    {
+        // Optional: Restrict to admins
+        if (Auth::user()->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:departments,name',
+        ]);
+
+        $department = Department::create([
+            'name' => $validated['name'],
+        ]);
+
+        return response()->json([
+            'message' => 'Department created successfully',
+            'department' => $department,
+        ], 201);
+    }
+
+    //update department
+    public function updateDepartment(Request $request, $id)
+    {
+        // Optional: Restrict to admins
+        if (Auth::user()->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $department = Department::find($id);
+        if (!$department) {
+            return response()->json(['message' => 'Department not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:departments,name,' . $id,
+        ]);
+
+        $department->update([
+            'name' => $validated['name'],
+        ]);
+
+        return response()->json([
+            'message' => 'Department updated successfully',
+            'department' => $department,
+        ], 200);
+    }
+
+    //delete department
+    public function deleteDepartment($id)
+    {
+        // Optional: Restrict to admins
+        if (Auth::user()->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $department = Department::find($id);
+        if (!$department) {
+            return response()->json(['message' => 'Department not found'], 404);
+        }
+
+        // Check if department has students (optional protection)
+        if ($department->students()->count() > 0) {
+            return response()->json(['message' => 'Cannot delete department with associated students'], 403);
+        }
+
+        $department->delete();
+
+        return response()->json(['message' => 'Department deleted successfully'], 200);
+    }
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
