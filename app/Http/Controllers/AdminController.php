@@ -569,12 +569,37 @@ class AdminController extends Controller
         ], 200);
     }
 
-    //posts
-    public function getAllPosts()
+    // Fetch all posts with pagination
+    public function getAllPostsAdmin(Request $request)
     {
-        $posts = Post::with('candidate')->get();
+        // Set default per page value, or use query parameter
+        $perPage = $request->query('per_page', 2); // Default to 10 posts per page
+
+        // Fetch paginated posts with relationships
+        $posts = Post::with([
+            'candidate' => function ($query) {
+                $query->select('id', 'user_id', 'profile_photo', 'position_id', 'party_list_id')
+                    ->with([
+                        'user:id,name',
+                        'position:id,name',
+                        'partylist:id,name',
+                        'department:id,name'
+                    ]);
+            }
+        ])->paginate($perPage);
+
         return response()->json([
-            'posts' => $posts,
+            'posts' => $posts->items(), // Current page items
+            'pagination' => [
+                'total' => $posts->total(),
+                'per_page' => $posts->perPage(),
+                'current_page' => $posts->currentPage(),
+                'last_page' => $posts->lastPage(),
+                'from' => $posts->firstItem(),
+                'to' => $posts->lastItem(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'prev_page_url' => $posts->previousPageUrl(),
+            ],
         ], 200);
     }
 }

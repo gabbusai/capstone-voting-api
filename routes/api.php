@@ -113,7 +113,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::post('/partylist-make', [AdminController::class, 'createPartylist']);
 
     //posts
-    Route::get('/admin/posts/all', [PostController::class, 'getAllPosts']);
+    Route::get('/admin/posts/all', [AdminController::class, 'getAllPostsAdmin']);
     
 });
 //CANDIDATE ONLY ROUTES
