@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
@@ -545,6 +546,50 @@ class AdminController extends Controller
         ], 201);
     }
 
+    public function deletePartylist($id)
+    {
+        $partylist = Partylist::find($id);
+        if (!$partylist) {
+            return response()->json(['message' => 'Party list not found.'], 404);
+        }
+
+        // Optional: Check if partylist has candidates
+        if ($partylist->candidates()->count() > 0) {
+            return response()->json(['message' => 'Cannot delete party list with associated candidates.'], 403);
+        }
+
+        $partylist->delete();
+        return response()->json(['message' => 'Party list deleted successfully'], 200);
+    }
+
+    public function updatePartylist(Request $request, $id)
+    {
+        $partylist = PartyList::find($id);
+        if (!$partylist) {
+            return response()->json(['message' => 'partylist not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('party_lists', 'name')->ignore($id), // Ignore current position for unique check
+            ],
+            'description' => 'required|string',
+        ]);
+
+        $partylist->update([
+            'name' => $validated['name'],
+            'description' => $validated['description']
+        ]);
+
+        return response()->json([
+            'message' => 'Position updated successfully!',
+            'partylist' => $partylist->fresh() // Get updated instance
+        ], 200);
+    }
+
     //data fetching needed for admin
     public function adminGetElections()
     {
@@ -736,14 +781,185 @@ class AdminController extends Controller
         return response()->json(['message' => 'Department deleted successfully'], 200);
     }
 
+
+public function listStudents(Request $request)
+    {
+        $perPage = $request->query('per_page', 40);
+        $search = $request->query('search');
+
+        $query = Student::with(['user' => function ($query) {
+            $query->select('id', 'student_id')->with(['tokenOTPs' => function ($query) {
+                $query->select('id', 'user_id', 'tokenOTP', 'expires_at', 'used');
+            }]);
+        }]);
+
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('id', 'like', "%{$search}%");
+        }
+
+        $students = $query->paginate($perPage);
+
+        $data = $students->map(function ($student) {
+            $user = $student->user;
+            return [
+                'id' => $student->id,
+                'name' => $student->name,
+                'year' => $student->year,
+                'department_id' => $student->department_id,
+                'is_registered' => !is_null($user),
+                'tokenOTPs' => $user
+                    ? $user->tokenOTPs->map(function ($otp) {
+                        return [
+                            'id' => $otp->id,
+                            'tokenOTP' => $otp->tokenOTP,
+                            'expires_at' => $otp->expires_at,
+                            'used' => $otp->used,
+                        ];
+                    })->toArray()
+                    : 'unregistered',
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Students retrieved successfully',
+            'students' => $data,
+            'pagination' => [
+                'total' => $students->total(),
+                'per_page' => $students->perPage(),
+                'current_page' => $students->currentPage(),
+                'last_page' => $students->lastPage(),
+                'from' => $students->firstItem(),
+                'to' => $students->lastItem(),
+                'next_page_url' => $students->nextPageUrl(),
+                'prev_page_url' => $students->previousPageUrl(),
+            ],
+        ], 200);
+    }
+
+    public function generateTokenOTP(Request $request)
+    {
+        // Optional: Restrict to admins
+        if (Auth::user()->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $studentIds = $request->input('student_ids', []); // Array of student IDs
+        $expiresAt = now()->addHours(24); // Default 24-hour expiration
+
+        $results = [];
+        foreach ($studentIds as $studentId) {
+            $student = Student::with('user')->find($studentId);
+            if (!$student) {
+                $results[$studentId] = 'Student not found';
+                continue;
+            }
+            if (!$student->user) {
+                $results[$studentId] = 'Student not registered';
+                continue;
+            }
+
+            $tokenOTP = TokenOTP::create([
+                'user_id' => $student->user->id,
+                'tokenOTP' => Str::random(6), // 6-character random token
+                'expires_at' => $expiresAt,
+                'used' => false,
+            ]);
+
+            $results[$studentId] = [
+                'tokenOTP' => $tokenOTP->tokenOTP,
+                'expires_at' => $tokenOTP->expires_at,
+            ];
+        }
+
+        return response()->json([
+            'message' => 'TokenOTPs generated successfully',
+            'results' => $results,
+        ], 200);
+    }
+
+
     
 
 
 
 
+/**
+     * Create a new student
+     */
+    public function createStudent(Request $request)
+    {
+        // Optional: Restrict to admins
+        if (Auth::user()->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'year' => 'required|integer|min:1|max:5', // Assuming years 1-5
+            'department_id' => 'required|exists:departments,id',
+        ]);
 
+        $student = Student::create([
+            'name' => $validated['name'],
+            'year' => $validated['year'],
+            'department_id' => $validated['department_id'],
+        ]);
 
+        return response()->json([
+            'message' => 'Student created successfully',
+            'student' => $student,
+        ], 201);
+    }
+
+    /**
+     * Modify an existing student
+     */
+    public function updateStudent(Request $request, $id)
+    {
+        // Optional: Restrict to admins
+        if (Auth::user()->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $student = Student::find($id);
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'year' => 'sometimes|required|integer|min:1|max:5',
+            'department_id' => 'sometimes|required|exists:departments,id',
+        ]);
+
+        $student->update($validated);
+
+        return response()->json([
+            'message' => 'Student updated successfully',
+            'student' => $student,
+        ], 200);
+    }
+
+    /**
+     * Delete a student
+     */
+    public function deleteStudent($id)
+    {
+        // Optional: Restrict to admins
+        if (Auth::user()->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $student = Student::find($id);
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        $student->delete(); // Cascades to user and tokenOTPs due to onDelete('cascade')
+
+        return response()->json(['message' => 'Student deleted successfully'], 200);
+    }
 
 
 

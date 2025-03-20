@@ -252,6 +252,59 @@ class StudentController extends Controller
     }
     
 
+    //puno na admin controller so dito na man since student stuff naman hehe
+    public function listStudents(Request $request)
+    {
+        $perPage = $request->query('per_page', 10);
+        $search = $request->query('search', '');
+
+        $query = Student::with(['user', 'tokenOTPs' => function ($query) {
+            $query->select('id', 'student_id', 'tokenOTP', 'expires_at', 'used');
+        }]);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('id', 'like', "%{$search}%");
+            });
+        }
+
+        $students = $query->paginate($perPage);
+
+        $data = $students->map(function ($student) {
+            return [
+                'id' => $student->id,
+                'name' => $student->name,
+                'year' => $student->year,
+                'department_id' => $student->department_id,
+                'is_registered' => !is_null($student->user),
+                'tokenOTPs' => $student->user 
+                    ? $student->tokenOTPs->map(fn($otp) => [
+                        'id' => $otp->id,
+                        'tokenOTP' => $otp->tokenOTP,
+                        'expires_at' => $otp->expires_at,
+                        'used' => $otp->used,
+                    ]) 
+                    : 'unregistered',
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Students retrieved successfully',
+            'students' => $data,
+            'pagination' => [
+                'total' => $students->total(),
+                'per_page' => $students->perPage(),
+                'current_page' => $students->currentPage(),
+                'last_page' => $students->lastPage(),
+                'from' => $students->firstItem(),
+                'to' => $students->lastItem(),
+                'next_page_url' => $students->nextPageUrl(),
+                'prev_page_url' => $students->previousPageUrl(),
+            ],
+        ], 200);
+    }
+
     
     
 }

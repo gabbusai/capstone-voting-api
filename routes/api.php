@@ -110,7 +110,16 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::delete('/positions-delete/{id}', [AdminController::class, 'deletePosition']); //done 
 
     //make and edit partylist
-    Route::post('/partylist-make', [AdminController::class, 'createPartylist']);
+    Route::post('/partylist-make', [AdminController::class, 'createPartylist']); //
+    Route::put('/admin/partylist/{id}', [AdminController::class, 'updatePartylist']);
+    Route::delete('/admin/partylist/{id}', [AdminController::class, 'deletePartylist']);
+    
+    //students
+    Route::get('/admin/students/all', [AdminController::class, 'listStudents']);
+    Route::post('/admin/token/generate', [AdminController::class, 'generateTokenOTP']);
+    Route::post('/admin/students/make', [AdminController::class, 'verifyTokenOTP']);
+    Route::put('/admin/students/{id}', [AdminController::class, 'updateStudent']);
+    Route::delete('/admin/students/{id}', [AdminController::class, 'deleteStudent']);
 
     //posts
     Route::get('/admin/posts/all', [AdminController::class, 'getAllPostsAdmin']);

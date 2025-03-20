@@ -171,8 +171,6 @@ public function uploadProfilePhoto(Request $request, $candidateId)
 
     public function getAllPartylist(){
         $partylist = PartyList::with(['candidates'])->get();
-
-
         return response()->json($partylist);
     }
 
