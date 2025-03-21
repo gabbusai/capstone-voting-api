@@ -63,7 +63,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/candidates/posts/delete/{postId}', [PostController::class, 'deletePost']);
     Route::get('/candidate-id/{student_id}', [CandidateController::class, 'getCandidateIdByStudentId']);
     //posts
-    Route::get('/posts/approved', [PostController::class, 'getApprovedPosts']);
+    Route::get('/posts/approved', [PostController::class, 'getApprovedPostsPaginated']);
     Route::get('/posts/approved/{candidateId}', [PostController::class, 'getApprovedPostsByCandidate']);
 
 
@@ -117,7 +117,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     //students
     Route::get('/admin/students/all', [AdminController::class, 'listStudents']);
     Route::post('/admin/token/generate', [AdminController::class, 'generateTokenOTP']);
-    Route::post('/admin/students/make', [AdminController::class, 'verifyTokenOTP']);
+    Route::post('/admin/students/make', [AdminController::class, 'createStudent']);
     Route::put('/admin/students/{id}', [AdminController::class, 'updateStudent']);
     Route::delete('/admin/students/{id}', [AdminController::class, 'deleteStudent']);
 

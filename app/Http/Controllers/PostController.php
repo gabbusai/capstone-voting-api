@@ -187,13 +187,13 @@ class PostController extends Controller
     }
 
         // Fetch all posts with pagination
-        public function getAllPostsPaginated(Request $request)
+        public function getApprovedPostsPaginated(Request $request)
         {
             // Set default per page value, or use query parameter
-            $perPage = $request->query('per_page', 2); // Default to 10 posts per page
-    
+            $perPage = $request->query('per_page', 2); 
+            $search = $request->query('search');
             // Fetch paginated posts with relationships
-            $posts = Post::where('is_approved', true)->with([
+            $query = Post::where('is_approved', true)->with([
                 'candidate' => function ($query) {
                     $query->select('id', 'user_id', 'profile_photo', 'position_id', 'party_list_id')
                         ->with([
@@ -203,7 +203,21 @@ class PostController extends Controller
                             'department:id,name'
                         ]);
                 }
-            ])->paginate($perPage);
+            ]);
+
+            if($search){
+                $query->whereAny([
+                    'title',
+                    'content',
+                ], 'like', "%$search%" )
+                ->orWhereHas('candidate.user', function ($query) use ($search){
+                    $query->where('name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('candidate.partylist', function ($query) use ($search){
+                    $query->where('name', 'like', "%{$search}%");
+                });
+            }
+            $posts = $query->paginate($perPage);
     
             return response()->json([
                 'posts' => $posts->items(), // Current page items
