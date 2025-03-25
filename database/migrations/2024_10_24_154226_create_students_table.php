@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id(); //student id or student number
-            $table->integer('year');
             $table->string('name');
             $table->foreignId('department_id')->constrained('departments')->onDelete('cascade');
             $table->timestamps();

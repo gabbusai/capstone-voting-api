@@ -9,7 +9,13 @@ class Student extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['year', 'name'];
+    protected $fillable = ['name', 'id', 'department_id'];
+    
+    // Disable auto-incrementing since we're setting 'id' manually
+    public $incrementing = false;
+
+    // Specify the primary key type as integer
+    protected $keyType = 'integer';
 
     // A student can have one associated user account
     public function user()

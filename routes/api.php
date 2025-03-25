@@ -126,6 +126,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::post('/admin/students/make', [AdminController::class, 'createStudent']);
     Route::put('/admin/students/{id}', [AdminController::class, 'updateStudent']);
     Route::delete('/admin/students/{id}', [AdminController::class, 'deleteStudent']);
+    Route::post('/admin/students/import', [StudentController::class ,'importStudents']);
 
     //posts
     Route::get('/admin/posts/all', [AdminController::class, 'getAllPostsAdmin']);

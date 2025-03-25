@@ -12,6 +12,7 @@ use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
 {   
@@ -276,7 +277,6 @@ class StudentController extends Controller
             return [
                 'id' => $student->id,
                 'name' => $student->name,
-                'year' => $student->year,
                 'department_id' => $student->department_id,
                 'is_registered' => !is_null($student->user),
                 'tokenOTPs' => $student->user 
@@ -358,6 +358,102 @@ class StudentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'An error occurred while submitting feedback.',
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function importStudents(Request $request)
+    {
+        try {
+            // Validate the uploaded file
+            $validator = Validator::make($request->all(), [
+                'file' => 'required|file|mimes:csv,txt|max:10240', // Max 10MB
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Get the uploaded file
+            $file = $request->file('file');
+            $path = $file->getRealPath();
+
+            // Open and read the CSV
+            if (($handle = fopen($path, 'r')) === false) {
+                return response()->json([
+                    'message' => 'Failed to open the CSV file.',
+                    'success' => false
+                ], 500);
+            }
+
+            // Skip the header if it exists (assuming no header in your sample)
+            $students = [];
+            $rowNumber = 0;
+
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                $rowNumber++;
+
+                // Validate row structure
+                if (count($data) !== 3) {
+                    fclose($handle);
+                    return response()->json([
+                        'message' => "Invalid CSV format at row $rowNumber. Expected 3 columns (student_id, name, department_id).",
+                        'success' => false
+                    ], 422);
+                }
+
+                [$studentId, $name, $departmentId] = $data;
+
+                // Basic validation for each row
+                if (!is_numeric($studentId) || !is_numeric($departmentId) || empty(trim($name))) {
+                    fclose($handle);
+                    return response()->json([
+                        'message' => "Invalid data at row $rowNumber: student_id and department_id must be numeric, name cannot be empty.",
+                        'success' => false
+                    ], 422);
+                }
+
+                $students[] = [
+                    'id' => (int) $studentId,
+                    'name' => trim($name),
+                    'department_id' => (int) $departmentId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            fclose($handle);
+
+            if (empty($students)) {
+                return response()->json([
+                    'message' => 'No valid data found in the CSV.',
+                    'success' => false
+                ], 422);
+            }
+
+            // Use upsert to insert or update students based on 'id'
+            Student::upsert(
+                $students,
+                ['id'], // Unique key(s) to match existing records
+                ['name', 'department_id', 'updated_at'] // Columns to update if record exists
+            );
+
+            return response()->json([
+                'message' => 'Students imported successfully.',
+                'success' => true,
+                'count' => count($students)
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'An error occurred while importing students.',
                 'success' => false,
                 'error' => $e->getMessage()
             ], 500);

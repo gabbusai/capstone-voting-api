@@ -806,7 +806,6 @@ public function listStudents(Request $request)
             return [
                 'id' => $student->id,
                 'name' => $student->name,
-                'year' => $student->year,
                 'department_id' => $student->department_id,
                 'is_registered' => !is_null($user),
                 'tokenOTPs' => $user
@@ -897,13 +896,11 @@ public function listStudents(Request $request)
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'year' => 'required|integer|min:1|max:5', // Assuming years 1-5
             'department_id' => 'required|exists:departments,id',
         ]);
 
         $student = Student::create([
             'name' => $validated['name'],
-            'year' => $validated['year'],
             'department_id' => $validated['department_id'],
         ]);
 
@@ -930,7 +927,6 @@ public function listStudents(Request $request)
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'year' => 'sometimes|required|integer|min:1|max:5',
             'department_id' => 'sometimes|required|exists:departments,id',
         ]);
 
