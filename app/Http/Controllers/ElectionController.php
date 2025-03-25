@@ -71,14 +71,14 @@ class ElectionController extends Controller
     public function getAllRegistered()
     {
         // Fetch all students who are associated with a user
-        $students = Student::whereHas('user')->with('user')->get();
+        $students = Student::whereHas('user')->with('user')->count();
         $studentCount = Student::all()->count();
-        $userCount = $students->count();
+        $userCount = $students;
 
         return response()->json([
             'total_students' => $studentCount,
             'total_registered' => $userCount,
-            'registered_students' => $students
+            
         ], 200);
     }
 
@@ -208,6 +208,8 @@ class ElectionController extends Controller
             'elections' => $elections
         ], 200);
     }
+
+    
 
     
 }

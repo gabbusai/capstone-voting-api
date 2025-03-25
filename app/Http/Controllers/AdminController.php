@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -1295,7 +1296,51 @@ public function getAdminElectionTurnout(Request $request, $electionId)
 
 
 
+    //get student count per department
+    public function getStudentCountByDep()
+    {
+        try {
+            // Total students across all departments
+            $totalStudents = Student::count();
 
+            // Stats per department: total students and registered students
+            $departmentStats = Department::select('departments.id', 'departments.name')
+                ->leftJoin('students', 'departments.id', '=', 'students.department_id')
+                ->leftJoin('users', 'students.id', '=', 'users.student_id')
+                ->groupBy('departments.id', 'departments.name')
+                ->selectRaw('COUNT(DISTINCT students.id) as total_students')
+                ->selectRaw('COUNT(DISTINCT users.id) as registered_students')
+                ->get()
+                ->map(function ($department) {
+                    return [
+                        'department_id' => $department->id,
+                        'department_name' => $department->name,
+                        'total_students' => (int) $department->total_students,
+                        'registered_students' => (int) $department->registered_students,
+                    ];
+                });
+
+            // Total registered students across all departments
+            $totalRegistered = Student::whereHas('user')->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_students' => $totalStudents,
+                    'total_registered' => $totalRegistered,
+                    'departments' => $departmentStats,
+                ],
+                'message' => 'Student statistics retrieved successfully.',
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve student statistics.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
 
 

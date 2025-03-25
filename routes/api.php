@@ -134,6 +134,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     //department stuff
     Route::get('admin/departments/all', [AdminController::class, 'listDepartmentsAdmin']);
     Route::get('admin/departments/{id}', [AdminController::class, 'getDepartmentAdmin']);
+    Route::get('admin/count/departments', [AdminController::class, 'getStudentCountByDep']);
     Route::post('admin/departments/', [AdminController::class, 'createDepartment']);
     Route::put('admin/departments/', [AdminController::class, 'updateDepartment']);
     Route::delete('admin/departments/{id}', [AdminController::class, 'deleteDepartment']);
