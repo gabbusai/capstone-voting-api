@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\Election;
+use App\Models\Feedback;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Student;
@@ -303,6 +304,64 @@ class StudentController extends Controller
                 'prev_page_url' => $students->previousPageUrl(),
             ],
         ], 200);
+    }
+
+    public function sendFeedback(Request $request)
+    {
+        try {
+            // Validate the request data
+            $validated = $request->validate([
+                'stars' => 'required|integer|between:1,5',
+                'title' => 'nullable|string|max:255',
+                'content' => 'required|string|max:5000',
+            ]);
+
+            // Ensure the user is authenticated
+            if (!Auth::check()) {
+                return response()->json([
+                    'message' => 'Unauthorized: You must be logged in to submit feedback.',
+                    'success' => false
+                ], 401);
+            }
+
+
+            // Create the feedback
+            $feedback = Feedback::create([
+                'user_id' => Auth::user()->id,
+                'stars' => $validated['stars'],
+                'title' => $validated['title'],
+                'content' => $validated['content'],
+            ]);
+
+            return response()->json([
+                'message' => 'Feedback submitted successfully.',
+                'success' => true,
+                'data' => [
+                    'id' => $feedback->id,
+                    'stars' => $feedback->stars,
+                    'title' => $feedback->title,
+                    'content' => $feedback->content,
+                    'created_at' => $feedback->created_at->toIso8601String(),
+                    'user' => [
+                        'id' => $feedback->user->id,
+                        'name' => $feedback->user->name,
+                    ]
+                ]
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'success' => false,
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'An error occurred while submitting feedback.',
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     

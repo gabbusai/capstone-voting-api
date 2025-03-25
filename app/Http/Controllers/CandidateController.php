@@ -174,6 +174,60 @@ public function uploadProfilePhoto(Request $request, $candidateId)
         return response()->json($partylist);
     }
 
+    //change bio
+    public function updateOwnBio(Request $request, $candidateId)
+    {
+        try {
+            // Validate the request data
+            $validated = $request->validate([
+                'bio' => 'required|string|max:500', // Adjust max length as needed
+            ]);
+
+            // Find the candidate or fail
+            $candidate = Candidate::findOrFail($candidateId);
+
+            // Check if the authenticated user owns this candidate profile
+            if (Auth::id() !== $candidate->user_id) {
+                return response()->json([
+                    'message' => 'Unauthorized: You can only update your own bio.',
+                    'success' => false
+                ], 403);
+            }
+
+            // Update the bio
+            $candidate->bio = $validated['bio'];
+            $candidate->save();
+
+            return response()->json([
+                'message' => 'Bio updated successfully.',
+                'success' => true,
+                'data' => [
+                    'candidate_id' => $candidate->id,
+                    'bio' => $candidate->bio,
+                    'updated_at' => $candidate->updated_at->toIso8601String()
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'success' => false,
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Candidate not found.',
+                'success' => false
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'An error occurred while updating the bio.',
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 
     
 }

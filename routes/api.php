@@ -55,6 +55,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/elections', [ElectionController::class, 'getAllElections'])->name('api.getAllElections');
     Route::get('/partylists/all', [CandidateController::class, 'getAllPartylist'])->name('api.getAllPartyList');
 
+
+    //candidate bio
+    Route::post('/candidates/{candidateId}/bio', [CandidateController::class, 'updateOwnBio']); //updateOwnBio
     //candidate pfp and posts
     Route::post('/candidates/{candidateId}/upload-photo', [CandidateController::class, 'uploadProfilePhoto']);
     Route::post('/candidates/posts/upload', [PostController::class, 'createPost']);
@@ -74,6 +77,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/election/{id}/results', [VoteController::class, 'getElectionResults']);
 
 
+    //send feedback
+    Route::post('/feedback/send', [StudentController::class, 'sendFeedback']);
+    
 });
 
 //ADMIN ONLY ROUTES

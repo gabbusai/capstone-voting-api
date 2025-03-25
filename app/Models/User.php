@@ -90,4 +90,8 @@ class User extends Authenticatable implements MustVerifyEmail
     public function tokenOTPs(){
         return $this->hasMany(TokenOTP::class);
     }
+
+    public function feedbacks(){
+        return $this->hasMany(Feedback::class);
+    }
 }
