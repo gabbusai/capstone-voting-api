@@ -18,6 +18,7 @@ use App\Models\Post;
 use App\Models\Student;
 use App\Models\TokenOTP;
 use App\Models\User;
+use App\Models\Vote;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -616,7 +617,7 @@ class AdminController extends Controller
     public function getAllPostsAdmin(Request $request)
     {
         // Set default per page value, or use query parameter
-        $perPage = $request->query('per_page', 2); // Default to 10 posts per page
+        $perPage = $request->query('per_page', 10); // Default to 10 posts per page
 
         // Fetch paginated posts with relationships
         $posts = Post::with([
@@ -961,7 +962,340 @@ public function listStudents(Request $request)
         return response()->json(['message' => 'Student deleted successfully'], 200);
     }
 
+    //ELECTION and ELECTION RESULTS
+    public function updateElectionStatus(Request $request, $electionId)
+    {
+        $election = Election::find($electionId);
+        if (!$election) {
+            return response()->json(['message' => 'Election not found'], 404);
+        }
 
+        // Validate the incoming status
+        $request->validate([
+            'status' => 'required|in:upcoming,ongoing,completed',
+        ]);
+
+        $newStatus = $request->input('status');
+        $now = Carbon::now();
+
+        // Prevent changing back to 'upcoming' from 'ongoing' or 'completed'
+        if ($election->status !== 'upcoming' && $newStatus === 'upcoming') {
+            return response()->json(['message' => 'Cannot revert election to upcoming status'], 400);
+        }
+
+        // Check if status change to 'ongoing' is allowed
+        if ($newStatus === 'ongoing') {
+            $startDate = Carbon::parse($election->election_start_date);
+            if ($now->lt($startDate)) {
+                return response()->json([
+                    'message' => "Election cannot start yet. Start date is {$startDate->toDateTimeString()}",
+                ], 400);
+            }
+        }
+
+        // Check if status change to 'completed' is allowed
+        if ($newStatus === 'completed') {
+            $endDate = Carbon::parse($election->election_end_date);
+            if ($now->lt($endDate)) {
+                return response()->json([
+                    'message' => "Election cannot be completed yet. End date is {$endDate->toDateTimeString()}",
+                ], 400);
+            }
+            if ($election->status !== 'ongoing') {
+                return response()->json(['message' => 'Election must be ongoing before marking as completed'], 400);
+            }
+        }
+
+        // Update the status
+        $election->status = $newStatus;
+        $election->save();
+
+        return response()->json([
+            'message' => "Election status updated to '{$newStatus}' successfully",
+            'election' => [
+                'id' => $election->id,
+                'name' => $election->election_name,
+                'status' => $election->status,
+                'election_start_date' => $election->election_start_date,
+                'election_end_date' => $election->election_end_date,
+            ],
+        ], 200);
+    }
+
+
+    //get admin election results
+    public function getAdminElectionResults($electionId)
+    {
+        // Fetch the election with candidates and relationships
+        $election = Election::with(['candidates.position', 'candidates.partylist', 'candidates.user'])
+            ->find($electionId);
+
+        if (!$election) {
+            return response()->json(['message' => 'Election not found'], 404);
+        }
+
+        // Total registered students (potential voters)
+        $totalVoters = Student::where(function ($query) use ($election) {
+            if ($election->department_id) {
+                $query->where('department_id', $election->department_id);
+            }
+        })->count();
+
+        // Total votes cast (unique voters)
+        $votesCast = Vote::where('election_id', $electionId)
+            ->distinct('voter_student_id')
+            ->count('voter_student_id');
+
+        // Calculate turnout percentage
+        $turnoutPercentage = $totalVoters > 0 ? round(($votesCast / $totalVoters) * 100, 2) : 0;
+
+        // Fetch vote tallies per candidate
+        $tallies = Vote::where('election_id', $electionId)
+            ->selectRaw('candidate_id, COUNT(*) as vote_count')
+            ->groupBy('candidate_id')
+            ->get()
+            ->keyBy('candidate_id');
+
+        // Organize results by position
+        $results = [];
+        foreach ($election->candidates as $candidate) {
+            $positionId = $candidate->position->id;
+            $positionName = $candidate->position->name;
+
+            if (!isset($results[$positionId])) {
+                $results[$positionId] = [
+                    'position_id' => $positionId,
+                    'position_name' => $positionName,
+                    'candidates' => [],
+                    'winners' => [],
+                ];
+            }
+
+            $voteCount = $tallies[$candidate->id]->vote_count ?? 0;
+
+            $results[$positionId]['candidates'][] = [
+                'candidate_id' => $candidate->id,
+                'student_id' => $candidate->student_id,
+                'name' => $candidate->user->name ?? 'Unknown',
+                'profile_photo' => $candidate->profile_photo ?? null,
+                'partylist' => $candidate->partylist->name ?? 'Independent',
+                'votes' => $voteCount,
+            ];
+        }
+
+        // Determine winners and add admin details
+        foreach ($results as &$position) {
+            if (empty($position['candidates'])) {
+                $position['winners'] = ['No candidates for this position'];
+                continue;
+            }
+
+            $position['candidates'] = collect($position['candidates'])->sortByDesc('votes')->values();
+
+            if ($position['candidates'][0]['votes'] === 0) {
+                $position['winners'] = ['No votes received for this position'];
+            } else {
+                $highestVote = $position['candidates'][0]['votes'];
+                $position['winners'] = $position['candidates']
+                    ->filter(fn($candidate) => $candidate['votes'] === $highestVote)
+                    ->values();
+            }
+        }
+
+        return response()->json([
+            'election' => [
+                'id' => $election->id,
+                'name' => $election->election_name,
+                'status' => $election->status,
+                'department_id' => $election->department_id,
+                'total_voters' => $totalVoters,
+                'votes_cast' => $votesCast,
+                'turnout_percentage' => $turnoutPercentage,
+            ],
+            'results' => array_values($results),
+        ], 200);
+    }
+
+
+    public function getElectionTurnout(Request $request, $electionId)
+{
+    $election = Election::find($electionId);
+    if (!$election) {
+        return response()->json(['message' => 'Election not found'], 404);
+    }
+
+    // Total registered students (potential voters)
+    $totalVoters = Student::where(function ($query) use ($election) {
+        if ($election->department_id) {
+            $query->where('department_id', $election->department_id);
+        }
+    })->count();
+
+    // Total votes cast (unique voters)
+    $votesCast = Vote::where('election_id', $electionId)
+        ->distinct('voter_student_id')
+        ->count('voter_student_id');
+
+    // Turnout percentage
+    $turnoutPercentage = $totalVoters > 0 ? round(($votesCast / $totalVoters) * 100, 2) : 0;
+
+    // Paginated voters list with search
+    $perPage = $request->query('per_page', 10);
+    $search = $request->query('search');
+
+    $votersQuery = Vote::where('election_id', $electionId)
+        ->join('students', 'votes.voter_student_id', '=', 'students.id')
+        ->join('users', 'votes.user_id', '=', 'users.id')
+        ->join('candidates', 'votes.candidate_id', '=', 'candidates.id')
+        ->select(
+            'votes.voter_student_id as student_id',
+            'users.name as voter_name',
+            'students.department_id',
+            'votes.created_at as vote_date',
+            'candidates.id as candidate_id',
+            'candidates.user_id as candidate_user_id'
+        )
+        ->with([
+            'candidate.user' => fn($q) => $q->select('id', 'name'),
+            'election' => fn($q) => $q->select('id', 'election_name')
+        ]);
+
+    if ($search) {
+        $votersQuery->where(function ($query) use ($search) {
+            $query->where('users.name', 'like', "%{$search}%")
+                  ->orWhere('votes.voter_student_id', 'like', "%{$search}%");
+        });
+    }
+
+    $voters = $votersQuery->paginate($perPage);
+
+    // Format voter data
+    $voterList = $voters->map(function ($vote) {
+        return [
+            'student_id' => $vote->student_id,
+            'name' => $vote->voter_name,
+            'department_id' => $vote->department_id,
+            'vote_date' => $vote->vote_date,
+            'voted_for' => [
+                'candidate_id' => $vote->candidate_id,
+                'candidate_name' => $vote->candidate->user->name ?? 'Unknown',
+            ],
+        ];
+    });
+
+    return response()->json([
+        'election' => [
+            'id' => $election->id,
+            'name' => $election->election_name,
+            'status' => $election->status,
+            'total_voters' => $totalVoters,
+            'votes_cast' => $votesCast,
+            'turnout_percentage' => $turnoutPercentage,
+        ],
+        'voters' => $voterList,
+        'pagination' => [
+            'total' => $voters->total(),
+            'per_page' => $voters->perPage(),
+            'current_page' => $voters->currentPage(),
+            'last_page' => $voters->lastPage(),
+            'from' => $voters->firstItem(),
+            'to' => $voters->lastItem(),
+            'next_page_url' => $voters->nextPageUrl(),
+            'prev_page_url' => $voters->previousPageUrl(),
+        ],
+    ], 200);
+}
+
+
+//election turnouts
+public function getAdminElectionTurnout(Request $request, $electionId)
+{
+    $election = Election::find($electionId);
+    if (!$election) {
+        return response()->json(['message' => 'Election not found'], 404);
+    }
+
+    // Total registered students (potential voters)
+    $totalVoters = Student::where(function ($query) use ($election) {
+        if ($election->department_id) {
+            $query->where('department_id', $election->department_id);
+        }
+    })->count();
+
+    // Total votes cast (unique voters)
+    $votesCast = Vote::where('election_id', $electionId)
+        ->distinct('voter_student_id')
+        ->count('voter_student_id');
+
+    // Turnout percentage
+    $turnoutPercentage = $totalVoters > 0 ? round(($votesCast / $totalVoters) * 100, 2) : 0;
+
+    // Paginated voters list with search
+    $perPage = $request->query('per_page', 10);
+    $search = $request->query('search');
+
+    $votersQuery = Vote::where('votes.election_id', $electionId) // Explicitly specify votes.election_id
+        ->join('students', 'votes.voter_student_id', '=', 'students.id')
+        ->join('users', 'votes.user_id', '=', 'users.id')
+        ->join('candidates', 'votes.candidate_id', '=', 'candidates.id')
+        ->select(
+            'votes.voter_student_id as student_id',
+            'users.name as voter_name',
+            'students.department_id',
+            'votes.created_at as vote_date',
+            'candidates.id as candidate_id',
+            'candidates.user_id as candidate_user_id'
+        )
+        ->with([
+            'candidate.user' => fn($q) => $q->select('id', 'name'),
+            'election' => fn($q) => $q->select('id', 'election_name')
+        ]);
+
+    if ($search) {
+        $votersQuery->where(function ($query) use ($search) {
+            $query->where('users.name', 'like', "%{$search}%")
+                  ->orWhere('votes.voter_student_id', 'like', "%{$search}%");
+        });
+    }
+
+    $voters = $votersQuery->paginate($perPage);
+
+    // Format voter data
+    $voterList = $voters->map(function ($vote) {
+        return [
+            'student_id' => $vote->student_id,
+            'name' => $vote->voter_name,
+            'department_id' => $vote->department_id,
+            'vote_date' => $vote->vote_date,
+            'voted_for' => [
+                'candidate_id' => $vote->candidate_id,
+                'candidate_name' => $vote->candidate->user->name ?? 'Unknown',
+            ],
+        ];
+    });
+
+    return response()->json([
+        'election' => [
+            'id' => $election->id,
+            'name' => $election->election_name,
+            'status' => $election->status,
+            'total_voters' => $totalVoters,
+            'votes_cast' => $votesCast,
+            'turnout_percentage' => $turnoutPercentage,
+        ],
+        'voters' => $voterList,
+        'pagination' => [
+            'total' => $voters->total(),
+            'per_page' => $voters->perPage(),
+            'current_page' => $voters->currentPage(),
+            'last_page' => $voters->lastPage(),
+            'from' => $voters->firstItem(),
+            'to' => $voters->lastItem(),
+            'next_page_url' => $voters->nextPageUrl(),
+            'prev_page_url' => $voters->previousPageUrl(),
+        ],
+    ], 200);
+}
 
 
 

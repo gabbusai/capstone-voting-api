@@ -130,7 +130,11 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::post('admin/departments/', [AdminController::class, 'createDepartment']);
     Route::put('admin/departments/', [AdminController::class, 'updateDepartment']);
     Route::delete('admin/departments/{id}', [AdminController::class, 'deleteDepartment']);
-    
+
+    //elections votes and results
+    Route::get('/admin/elections/{electionId}/results', [AdminController::class, 'getAdminElectionResults']);
+    Route::get('/admin/elections/{electionId}/turnout', [AdminController::class, 'getAdminElectionTurnout']);
+    Route::put('/admin/elections/{electionId}/status', [AdminController::class, 'updateElectionStatus']);
 });
 //CANDIDATE ONLY ROUTES
 
