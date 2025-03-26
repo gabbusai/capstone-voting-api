@@ -48,12 +48,12 @@ class StudentSeeder extends Seeder
             ['id' => 30,  'name' => 'Brienne of Tarth', 'department_id' => 2],
 
             //TESTING BUKAS
-            ['id' => '0121300895',  'name' => 'John Gabriel Dayrit', 'department_id' => 1],
+            /*['id' => '0121300895',  'name' => 'John Gabriel Dayrit', 'department_id' => 1],
             ['id' => '0121302082',  'name' => 'John Aurvey Villapana', 'department_id' => 1],
             ['id' => '0121302060',  'name' => 'Ianne Lloyd Amerson C. Chua', 'department_id' => 1],
             ['id' => '0121300648',  'name' => 'Mark Daniel Torres', 'department_id' => 1],
             ['id' => '0122303517',  'name' => 'Jesus Brown', 'department_id' => 1],
-            ['id' => '0120301756',  'name' => 'Nelson Intal', 'department_id' => 1],
+            ['id' => '0120301756',  'name' => 'Nelson Intal', 'department_id' => 1], */
             
             ['id'=> '012345',  'name' => 'Test Smith', 'department_id' => 1],
             ['id' => '9999',  'name' => 'Admin', 'department_id' => 1],

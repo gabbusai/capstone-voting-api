@@ -163,8 +163,8 @@ public function getElectionDetails($electionId)
         'election' => [
             'id' => $election->id,
             'election_type_id' => $election->election_type_id,
-            'department_id' => $election->department_id,
-            'department' => $department->name,
+            'department_id' => $election->department_id ? $election->department_id : null,
+            'department' => $election->department_id ? $department->name : null,
             'name' => $election->election_name,
             'campaign_start_date' => $election->campaign_start_date,
             'campaign_end_date' => $election->campaign_end_date,
