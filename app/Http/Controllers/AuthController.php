@@ -110,6 +110,12 @@ class AuthController extends Controller
     
         // Check if the user already exists for this student
         $user = User::where('student_id', $student->id)->first();
+        $isDeviceExisting = User::where('device_id', $request->device_id)->first();
+
+        if($isDeviceExisting)
+        {
+            return $this->error('', 'device is already used by others', 403);
+        }
         
         // If the user already exists, validate the device_id
         if ($user) {
@@ -197,11 +203,11 @@ public function verifyOTP(Request $request)
         return $this->error('', 'User not found', 404);
     }
 
-    /*
+    
     if($user->device_id !== $request->device_id){
         return $this->error('', 'Device ID does not match', 401);
     }
-    */
+    
 
     // Fetch the OTP record using the token provided
     $tokenRecord = TokenOTP::where('tokenOTP', $request->tokenOTP)->first();
