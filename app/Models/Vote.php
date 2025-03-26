@@ -9,6 +9,13 @@ class Vote extends Model
     protected $fillable = ['user_id', 'voter_student_id', 'position_id', 'position_name' ,'candidate_student_id', 
     'candidate_id', 'candidate_name', 'election_id'];
 
+    protected $casts = [
+        'candidate_name' => 'encrypted',
+        // voter_student_id and candidate_student_id stay unencrypted (integers)
+    ];
+
+    
+
     public function user()
     {
         return $this->belongsTo(User::class); // Link to User model

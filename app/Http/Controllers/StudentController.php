@@ -12,56 +12,57 @@ use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
-{   
+{
 
     public function getUser()
-{
-    $user = User::with(['department', 'role'])->find(Auth::user()->id);
+    {
+        $user = User::with(['department', 'role'])->find(Auth::user()->id);
 
-    // Ensure user exists
-    if (!$user) {
-        return response()->json(['message' => 'User not found'], 404);
+        // Ensure user exists
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        return response()->json($user);
     }
 
-    return response()->json($user);
-}
-
-    public function getAllDepartments(){
+    public function getAllDepartments()
+    {
         $departments = Department::all();
         return response()->json([
             'departments' => $departments
         ]);
     }
 
-    
+
     public function getCandidatesByPosition($electionId, $positionId)
     {
         // Fetch candidates filtered by position_id and eager load the related user and department
         $position = Position::find($positionId);
         $election = Election::find($electionId);
-        if(is_null($election)){
+        if (is_null($election)) {
             return response()->json([
-                'message'=>'Election Not Found'
-            ], 404); 
+                'message' => 'Election Not Found'
+            ], 404);
         }
 
         $candidates = Candidate::with(['user', 'department', 'partyList', 'election']) // Eager load the related models
-        ->where('position_id', $positionId)
-        ->where('election_id', $electionId) // Add filter for election_id
-        ->get();
+            ->where('position_id', $positionId)
+            ->where('election_id', $electionId) // Add filter for election_id
+            ->get();
 
         //if not general and election department doesnt match position department
-        if($election->election_type_id == 2 && $election->department_id != $position->department_id){
+        if ($election->election_type_id == 2 && $election->department_id != $position->department_id) {
             return response()->json([
                 'message' => 'Position is not in the Election',
                 'election' => $election->election_name,
                 'position' => $position->name,
             ], 403);
-        }else if($election->election_type_id == 1 && is_null($election->department_id) && $position->department_id )
-        { //if general and election department is null
+        } else if ($election->election_type_id == 1 && is_null($election->department_id) && $position->department_id) { //if general and election department is null
             return response()->json([
                 'message' => 'Position is not in the Election',
                 'election' => $election->election_name,
@@ -86,7 +87,7 @@ class StudentController extends Controller
                 'party_list' => $candidate->partyList->name, // Fetch name from PartyList model
             ];
         });
-    
+
         // Return the candidates as a JSON response
         return response()->json([
             'election' => $election->election_name,
@@ -107,10 +108,10 @@ class StudentController extends Controller
                 'message' => 'Student ID is required.'
             ], 400); // Bad Request
         }
-    
+
         // Search for the student ID in the database
         $student = Student::where('id', $student_id)->first();
-    
+
         // Check if the student was found
         if ($student) {
             return response()->json([
@@ -135,20 +136,20 @@ class StudentController extends Controller
                 'message' => 'Student ID is required.'
             ], 400); // Bad Request
         }
-    
+
         // Check if a student exists with the provided student_id
         $student = Student::where('id', $student_id)->first();
-    
+
         if (!$student) {
             return response()->json([
                 'success' => false,
                 'message' => 'No student found with the provided ID.'
             ], 404); // Not Found
         }
-    
+
         // Check if a user account exists for this student
         $user = User::where('student_id', $student->id)->first();
-    
+
         if ($user) {
             return response()->json([
                 'success' => true,
@@ -164,75 +165,75 @@ class StudentController extends Controller
             ], 404); // Not Found
         }
     }
-    
+
     public function validateStudentName(Request $request)
     {
-    // Validate the request
-    $validatedData = $request->validate([
-        'student_id' => 'required|string|max:255', // Ensure student_id is provided
-        'name' => 'required|string|max:255', // Ensure name is provided
-    ]);
-
-    // Extract validated data
-    $student_id = $validatedData['student_id'];
-    $name = $validatedData['name'];
-
-    // Search for the student by ID
-    $student = Student::where('id', $student_id)->first();
-
-    // Check if the student exists
-    if (!$student) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Student ID not found.'
-        ], 404); // Not Found
-    }
-
-    // Validate if the name matches
-    if (strtolower($student->name) === strtolower($name)) {
-        return response()->json([
-            'success' => true,
-            'message' => 'Student ID and name match.',
-            'data' => $student // Optional: include student details
+        // Validate the request
+        $validatedData = $request->validate([
+            'student_id' => 'required|string|max:255', // Ensure student_id is provided
+            'name' => 'required|string|max:255', // Ensure name is provided
         ]);
-    } else {
-        return response()->json([
-            'success' => false,
-            'message' => 'The name does not match the student ID.'
-        ], 422); // Unprocessable Entity
-    }
-}
 
-    
+        // Extract validated data
+        $student_id = $validatedData['student_id'];
+        $name = $validatedData['name'];
+
+        // Search for the student by ID
+        $student = Student::where('id', $student_id)->first();
+
+        // Check if the student exists
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student ID not found.'
+            ], 404); // Not Found
+        }
+
+        // Validate if the name matches
+        if (strtolower($student->name) === strtolower($name)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Student ID and name match.',
+                'data' => $student // Optional: include student details
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'The name does not match the student ID.'
+            ], 422); // Unprocessable Entity
+        }
+    }
+
+
 
 
     public function testFileForCandidacy($userId, $positionId)
     {
         // Fetch the candidate associated with the user
         $candidate = Candidate::where('user_id', $userId)->first();
-    
+
         // Check if the user is a candidate
         if (!$candidate) {
             return response()->json([
                 'message' => 'You are not a registered candidate.'
             ], 403); // Forbidden
-        } 
-    
+        }
+
         // Fetch the position
         $position = Position::find($positionId);
-    
+
         // Check if the position exists
         if (!$position) {
             return response()->json([
                 'message' => 'Position does not exist.'
             ], 404); // Not found
         }
-    
+
         // Fetch the user's department
         $userDepartmentId = $candidate->department_id;
         $isPositionGeneral = $position->is_general;
         $positionDepartmentId = $position->department_id;
-    
+
         // Check eligibility based on position type
         if ($isPositionGeneral) {
             // For general positions, all candidates are eligible
@@ -252,7 +253,7 @@ class StudentController extends Controller
             }
         }
     }
-    
+
 
     //puno na admin controller so dito na man since student stuff naman hehe
     public function listStudents(Request $request)
@@ -267,7 +268,7 @@ class StudentController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('id', 'like', "%{$search}%");
+                    ->orWhere('id', 'like', "%{$search}%");
             });
         }
 
@@ -279,13 +280,13 @@ class StudentController extends Controller
                 'name' => $student->name,
                 'department_id' => $student->department_id,
                 'is_registered' => !is_null($student->user),
-                'tokenOTPs' => $student->user 
+                'tokenOTPs' => $student->user
                     ? $student->tokenOTPs->map(fn($otp) => [
                         'id' => $otp->id,
                         'tokenOTP' => $otp->tokenOTP,
                         'expires_at' => $otp->expires_at,
                         'used' => $otp->used,
-                    ]) 
+                    ])
                     : 'unregistered',
             ];
         });
@@ -348,7 +349,6 @@ class StudentController extends Controller
                     ]
                 ]
             ], 201);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'message' => 'Validation failed.',
@@ -363,7 +363,6 @@ class StudentController extends Controller
             ], 500);
         }
     }
-
 
     public function importStudents(Request $request)
     {
@@ -422,7 +421,7 @@ class StudentController extends Controller
 
                 $students[] = [
                     'id' => (int) $studentId,
-                    'name' => trim($name),
+                    'name' => Crypt::encryptString(trim($name)), // Encrypt name before upsert
                     'department_id' => (int) $departmentId,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -450,7 +449,6 @@ class StudentController extends Controller
                 'success' => true,
                 'count' => count($students)
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'An error occurred while importing students.',
@@ -460,6 +458,37 @@ class StudentController extends Controller
         }
     }
 
-    
-    
+    public function paginatedFeedbacks(request $request)
+    {
+        // Set default per page value, or use query parameter
+        $perPage = $request->query('per_page', 2);
+        $search = $request->query('search');
+        // Fetch paginated feedbacks with relationships
+        $query = Feedback::with([
+            'user'
+        ]);
+
+        if($search){
+            $query->whereAny([
+                'stars',
+                'title',
+                'content',
+            ], 'like', "%$search%" );
+        }
+        $feedbacks = $query->paginate($perPage);
+
+        return response()->json([
+            'feedbacks' => $feedbacks->items(), // Current page items
+            'pagination' => [
+                'total' => $feedbacks->total(),
+                'per_page' => $feedbacks->perPage(),
+                'current_page' => $feedbacks->currentPage(),
+                'last_page' => $feedbacks->lastPage(),
+                'from' => $feedbacks->firstItem(),
+                'to' => $feedbacks->lastItem(),
+                'feedbacks' => $feedbacks->nextPageUrl(),
+                'prev_page_url' => $feedbacks->previousPageUrl(),
+            ],
+        ], 200);
+    }
 }

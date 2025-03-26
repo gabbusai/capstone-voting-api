@@ -26,6 +26,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'device_id'
     ];
 
+    protected $casts = [
+        'name' => 'encrypted',
+        'email' => 'encrypted',
+        // student_id stays unencrypted (integer)
+    ];
     /**
      * The attributes that should be hidden for serialization.
      *

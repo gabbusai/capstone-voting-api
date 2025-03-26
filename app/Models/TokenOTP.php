@@ -23,6 +23,12 @@ class TokenOTP extends Model
         'device_id',
     ];
 
+    protected $casts = [
+        'tokenOTP' => 'encrypted',
+        'expires_at' => 'datetime',
+        'used' => 'boolean',
+    ];
+
      //You can also define relationships if needed, for example:
      public function user() {
         return $this->belongsTo(User::class);

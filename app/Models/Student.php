@@ -10,7 +10,11 @@ class Student extends Model
     use HasFactory;
 
     protected $fillable = ['name', 'id', 'department_id'];
-    
+
+    protected $casts = [
+        'name' => 'encrypted',
+        // department_id remains unencrypted as it’s a foreign key
+    ];
     // Disable auto-incrementing since we're setting 'id' manually
     public $incrementing = false;
 

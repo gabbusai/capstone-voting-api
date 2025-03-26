@@ -33,74 +33,61 @@ use Illuminate\Support\Str;
 class AdminController extends Controller
 {
     use HttpResponses;
+
     public function adminLogin(Request $request)
-    {
-        $request->validate([
-            'student_id' => 'required|exists:students,id',
-            'email' => 'required|email',
-            'tokenOTP' => 'required'
-        ]);
+{
+    $request->validate([
+        'student_id' => 'required|exists:students,id',
+        'email' => 'required|email',
+        'tokenOTP' => 'required'
+    ]);
 
-
-        // Fetch the student based on student_id
-        $student = Student::where('id', $request->student_id)->first();
-
-        if (!$student) {
-            return $this->error('', 'Student not found', 404);
-        }
-
-        // Find the user by student_id or email
-        $user = User::where('student_id', $request->student_id)
-            ->orWhere('email', $request->email)
-            ->first();
-        // Ensure the user exists
-        if (!$user) {
-            return $this->error('', 'User not found', 404);
-        }
-
-        /*if($user->device_id !== $request->device_id){
-            return $this->error('', 'Device ID does not match', 401);
-        } */
-
-        if ($user->email != $request->email) {
-            return $this->error('', 'Email does not match', 401);
-        }
-
-        // Fetch the OTP record using the token provided
-        $tokenRecord = TokenOTP::where('tokenOTP', $request->tokenOTP)->first();
-
-        // Check if token is invalid or expired
-        if (!$tokenRecord) {
-            return $this->error('', 'Invalid OTP token', 404);
-        }
-
-        if ($tokenRecord->user_id !== $user->id) {
-            return $this->error('', 'Invalid OTP Token', 404);
-        }
-
-        if ($tokenRecord->tokenOTP != $request->tokenOTP) {
-            return $this->error('', 'Invalid OTP token', 404);
-        }
-
-
-        // Check if the submitted student_id matches the user's student_id
-        if ((string) $user->student_id !== (string) $request->student_id) {
-            return $this->error('', 'Student ID does not match', 401);
-        }
-
-        // Check if the user is an admin (role_id = 3)
-        if ($user->role_id !== 3) {
-            return $this->error('', 'ACCESS DENIED: You are not an admin', 403);
-        }
-
-        // If credentials are correct and the user is an admin, authenticate the user
-        Auth::login($user);
-
-        return $this->success([
-            'user' => $user,
-            'token' => $user->createToken('API Token of ' . $user->name)->plainTextToken,
-        ], 'Login successful');
+    // Fetch the student based on student_id (unencrypted)
+    $student = Student::where('id', $request->student_id)->first();
+    if (!$student) {
+        return $this->error('', 'Student not found', 404);
     }
+
+    // Find the user by student_id (unencrypted)
+    $user = User::where('student_id', $request->student_id)->first();
+    if (!$user) {
+        return $this->error('', 'User not found', 404);
+    }
+
+    // Verify email (decrypted) matches the request
+    if ($user->email !== $request->email) {
+        return $this->error('', 'Email does not match', 401);
+    }
+
+    // Fetch the OTP record by user_id and verify tokenOTP (decrypted)
+    $tokenRecord = TokenOTP::where('user_id', $user->id)->first();
+    if (!$tokenRecord || $tokenRecord->tokenOTP !== $request->tokenOTP) {
+        return $this->error('', 'Invalid OTP token', 404);
+    }
+
+    // Additional OTP checks
+    if ($tokenRecord->user_id !== $user->id) {
+        return $this->error('', 'Invalid OTP Token', 404);
+    }
+
+    // Check if the submitted student_id matches the user's student_id (redundant but kept for consistency)
+    if ((string) $user->student_id !== (string) $request->student_id) {
+        return $this->error('', 'Student ID does not match', 401);
+    }
+
+    // Check if the user is an admin (role_id = 3)
+    if ($user->role_id !== 3) {
+        return $this->error('', 'ACCESS DENIED: You are not an admin', 403);
+    }
+
+    // Authenticate the user
+    Auth::login($user);
+
+    return $this->success([
+        'user' => $user,
+        'token' => $user->createToken('API Token of ' . $user->name)->plainTextToken,
+    ], 'Login successful');
+}
 
     //reset password
     public function resetPassword(Request $request)
@@ -784,59 +771,70 @@ class AdminController extends Controller
     }
 
 
-public function listStudents(Request $request)
-    {
-        $perPage = $request->query('per_page', 40);
-        $search = $request->query('search');
+    public function listStudents(Request $request)
+{
+    $perPage = $request->query('per_page', 40);
+    $search = $request->query('search');
 
-        $query = Student::with(['user' => function ($query) {
-            $query->select('id', 'student_id')->with(['tokenOTPs' => function ($query) {
-                $query->select('id', 'user_id', 'tokenOTP', 'expires_at', 'used');
-            }]);
+    $query = Student::with(['user' => function ($query) {
+        $query->select('id', 'student_id')->with(['tokenOTPs' => function ($query) {
+            $query->select('id', 'user_id', 'tokenOTP', 'expires_at', 'used');
         }]);
+    }]);
 
-        if ($search) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('id', 'like', "%{$search}%");
-        }
-
-        $students = $query->paginate($perPage);
-
-        $data = $students->map(function ($student) {
-            $user = $student->user;
-            return [
-                'id' => $student->id,
-                'name' => $student->name,
-                'department_id' => $student->department_id,
-                'is_registered' => !is_null($user),
-                'tokenOTPs' => $user
-                    ? $user->tokenOTPs->map(function ($otp) {
-                        return [
-                            'id' => $otp->id,
-                            'tokenOTP' => $otp->tokenOTP,
-                            'expires_at' => $otp->expires_at,
-                            'used' => $otp->used,
-                        ];
-                    })->toArray()
-                    : 'unregistered',
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Students retrieved successfully',
-            'students' => $data,
-            'pagination' => [
-                'total' => $students->total(),
-                'per_page' => $students->perPage(),
-                'current_page' => $students->currentPage(),
-                'last_page' => $students->lastPage(),
-                'from' => $students->firstItem(),
-                'to' => $students->lastItem(),
-                'next_page_url' => $students->nextPageUrl(),
-                'prev_page_url' => $students->previousPageUrl(),
-            ],
-        ], 200);
+    // Only filter by unencrypted 'id' in the database if search is provided
+    if ($search) {
+        $query->where('id', 'like', "%{$search}%");
     }
+
+    $students = $query->paginate($perPage);
+
+    // Filter decrypted 'name' in memory if search is provided
+    if ($search) {
+        $students->setCollection(
+            $students->getCollection()->filter(function ($student) use ($search) {
+                return stripos($student->name, $search) !== false || // Decrypted name
+                       stripos((string)$student->id, $search) !== false;
+            })
+        );
+    }
+
+    $data = $students->map(function ($student) {
+        $user = $student->user;
+        return [
+            'id' => $student->id,
+            'name' => $student->name, // Decrypted by cast
+            'department_id' => $student->department_id,
+            'is_registered' => !is_null($user),
+            'tokenOTPs' => $user
+                ? $user->tokenOTPs->map(function ($otp) {
+                    return [
+                        'id' => $otp->id,
+                        'tokenOTP' => $otp->tokenOTP, // Decrypted by cast
+                        'expires_at' => $otp->expires_at,
+                        'used' => $otp->used,
+                    ];
+                })->toArray()
+                : 'unregistered',
+        ];
+    });
+
+    return response()->json([
+        'message' => 'Students retrieved successfully',
+        'students' => $data,
+        'pagination' => [
+            'total' => $students->total(),
+            'per_page' => $students->perPage(),
+            'current_page' => $students->currentPage(),
+            'last_page' => $students->lastPage(),
+            'from' => $students->firstItem(),
+            'to' => $students->lastItem(),
+            'next_page_url' => $students->nextPageUrl(),
+            'prev_page_url' => $students->previousPageUrl(),
+        ],
+    ], 200);
+}
+
 
     public function generateTokenOTP(Request $request)
     {

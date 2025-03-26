@@ -25,66 +25,6 @@ class AuthController extends Controller
      * Display a listing of the resource.
      */
 
-    //login mobile app
-    public function login(LoginUserRequest $request)
-    {   
-        // Validate the incoming request data
-        $request->validated($request->all());
-    
-        // Find the user by email only
-        $user = User::where('email', $request->email)->first();
-    
-        // Check if the user exists
-        if (!$user) {
-            return $this->error('', 'User not found', 404);
-        }
-    
-      // Check if the submitted student_id matches the user's student_id
-        if ((string) $user->student_id !== (string) $request->student_id) {
-            return $this->error('', 'Student ID does not match', 401);
-        }
-
-    
-        // Check if the password is correct
-        if (!Hash::check($request->password, $user->password)) {
-            return $this->error('', 'CREDENTIALS DO NOT MATCH', 401);
-        }
-    
-        // If credentials are correct, authenticate the user
-        Auth::login($user);
-    
-        return $this->success([
-            'user' => $user,
-            'token' => $user->createToken('API Token of ' . $user->name)->plainTextToken,
-        ], 'Login successful');
-    }
-    
-    //register mobile app
-    public function register(StoreUserRequest $request){
-    $validatedData = $request->validated($request->all());
-    //check if student number is in record db
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'student_id' => $request->student_id,
-        'department_id' => $request->department_id,
-        'role_id' => $request->role_id,
-        'contact_no' => $request->contact_no,
-        'section' => $request->section
-    ]);
-    
-
-    //mail to user providing the token
-    Mail::to($user->email)->send(New WelcomeMail($user));
-    
-    //event(new Registered($user));
-    return $this->success([
-        'user' => $user,
-        'token' => $user->createToken('API Token of ' . $user->name)->plainTextToken
-    ], 'success');
-}
-
     public function logout(){
         Auth::user()->currentAccessToken()->delete();
         return $this->success([
@@ -185,62 +125,47 @@ public function verifyOTP(Request $request)
     $request->validate([
         'student_id' => 'required|exists:students,id',
         'tokenOTP' => 'required', // OTP Token
-        'device_id' => 'required', // Device ID (if needed)
+        'device_id' => 'required', // Device ID
     ]);
 
-    // Fetch the student based on student_id
+    // Fetch the student based on student_id (unencrypted)
     $student = Student::where('id', $request->student_id)->first();
-
     if (!$student) {
         return $this->error('', 'Student not found', 404);
     }
 
-    // Fetch the user associated with the student
+    // Fetch the user associated with the student (student_id is unencrypted)
     $user = User::where('student_id', $student->id)->first();
-
-    // Ensure the user exists
     if (!$user) {
         return $this->error('', 'User not found', 404);
     }
 
-    
-    if($user->device_id !== $request->device_id){
+    // Verify device_id
+    if ($user->device_id !== $request->device_id) {
         return $this->error('', 'Device ID does not match', 401);
     }
-    
 
-    // Fetch the OTP record using the token provided
-    $tokenRecord = TokenOTP::where('tokenOTP', $request->tokenOTP)->first();
+    // Fetch the latest OTP record for this user (unencrypted user_id)
+    $tokenRecord = TokenOTP::where('user_id', $user->id)
+                           ->where('used', false) // Ensure it’s not used
+                           ->orderBy('created_at', 'desc') // Get the most recent
+                           ->first();
 
-    // Check if token is invalid or expired
-    if (!$tokenRecord) {
+    // Check if token exists and matches
+    if (!$tokenRecord || $tokenRecord->tokenOTP !== $request->tokenOTP) {
         return $this->error('', 'Invalid OTP token', 404);
     }
 
-    if ($tokenRecord->user_id !== $user->id){
-        return $this->error('', 'Invalid OTP Token', 404);
-    }
-
-
+    // Check if token is expired
     if (!$tokenRecord->expires_at || Carbon::now()->greaterThan($tokenRecord->expires_at)) {
         return $this->error('', 'OTP token has expired', 400);
     }
 
-    if($tokenRecord->tokenOTP != $request->tokenOTP){
-        return $this->error('', 'Invalid OTP Token', 404);
-    }
-
-    /*if($tokenRecord->used === 1){
-        return $this->error('', 'OTP token has been used', 400);
-    } */
-
-
-
-    // Mark the OTP as used (to prevent reuse)
+    // Mark the OTP as used to prevent reuse
     $tokenRecord->used = true;
     $tokenRecord->save();
 
-    // Generate a new Bearer token for authentication using Sanctum (Personal Access Token)
+    // Generate a new Bearer token for authentication
     $accessToken = $user->createToken('API Token of ' . $user->name)->plainTextToken;
 
     // Return the Bearer token in the response
@@ -249,7 +174,7 @@ public function verifyOTP(Request $request)
         'token_type' => 'Bearer',
     ], 'OTP verified successfully.');
 }
-}
 
+}
 
 
