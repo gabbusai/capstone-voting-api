@@ -46,7 +46,7 @@ class ElectionController extends Controller
         // If the election is not found, return a response with an error message
         if (is_null($election)) {
             return response()->json([
-                'message' => 'Election not found nigga'
+                'message' => 'Election not found'
             ], 404);
         }
 
