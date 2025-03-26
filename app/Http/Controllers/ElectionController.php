@@ -129,8 +129,7 @@ class ElectionController extends Controller
         // Check if there are candidates for the given election
         if ($candidatesGrouped->isEmpty()) {
             return response()->json([
-                'message' => 'No candidates found for this election.',
-                'data' => null
+                'message' => 'No candidates found for this election.'
             ], 404);
         }
 
