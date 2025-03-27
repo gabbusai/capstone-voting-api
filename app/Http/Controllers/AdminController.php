@@ -346,7 +346,6 @@ class AdminController extends Controller
         ]));
     
     
-    
         // Return success response
         return response()->json([
             'message' => 'Election updated successfully',

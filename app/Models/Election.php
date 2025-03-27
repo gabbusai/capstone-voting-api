@@ -7,7 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 class Election extends Model
 {
     protected $table = 'elections';
-    protected $fillable = ['name', 'description'];
+    protected $fillable = [
+        'election_name',
+        'campaign_start_date',
+        'campaign_end_date',
+        'election_start_date',
+        'election_end_date',
+        'status',
+        'department_id', 
+        'created_at',    
+        'updated_at'     
+    ];
 
     public function electionType()
     {
