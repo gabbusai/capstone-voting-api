@@ -99,6 +99,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     //make and edit elections
     Route::post('/elections/make', [AdminController::class, 'createElection'])->name('api.createElection'); //done
+    Route::put('/admin/election/edit', [AdminController::class, 'editElection']);
     
 
     //make and edit candidate
@@ -130,6 +131,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     //posts
     Route::get('/admin/posts/all', [AdminController::class, 'getAllPostsAdmin']);
+    Route::delete('/admin/posts/{id}', [AdminController::class, 'adminDeletePost']);
 
     //department stuff
     Route::get('admin/departments/all', [AdminController::class, 'listDepartmentsAdmin']);
@@ -146,6 +148,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     //feedback route
     Route::get('/admin/feedbacks/all', [StudentController::class, 'paginatedFeedbacks']);
+
 });
 //CANDIDATE ONLY ROUTES
 

@@ -310,6 +310,57 @@ class AdminController extends Controller
         ], 201); // Status 201 for resource creation
     }
 
+    public function editElection(Request $request)
+    {
+        // Check if the user is an admin
+        $user = Auth::user();
+        if ($user->role_id !== 3) { // 3 is the admin role_id
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+    
+        // Validate incoming request data
+        $validated = $request->validate([
+            'election_id' => 'required|integer|exists:elections,id',
+            'election_name' => 'sometimes|string|max:255',
+            'campaign_start_date' => 'sometimes|date|before:campaign_end_date',
+            'campaign_end_date' => 'sometimes|date|after:campaign_start_date|before:election_start_date',
+            'election_start_date' => 'sometimes|date|after:campaign_end_date|before:election_end_date',
+            'election_end_date' => 'sometimes|date|after:election_start_date',
+            'status' => 'sometimes|in:upcoming,ongoing,completed',
+        ]);
+    
+        // Find the election
+        $election = Election::find($validated['election_id']);
+        if (!$election) {
+            return response()->json(['message' => 'Election not found'], 404);
+        }
+    
+        // Update only provided fields
+        $election->update(array_filter([
+            'election_name' => $request->election_name,
+            'campaign_start_date' => $request->campaign_start_date,
+            'campaign_end_date' => $request->campaign_end_date,
+            'election_start_date' => $request->election_start_date,
+            'election_end_date' => $request->election_end_date,
+            'status' => $request->status,
+        ]));
+    
+    
+    
+        // Return success response
+        return response()->json([
+            'message' => 'Election updated successfully',
+            'election' => [
+                'id' => $election->id,
+                'election_name' => $election->election_name,
+                'campaign_start_date' => $election->campaign_start_date,
+                'campaign_end_date' => $election->campaign_end_date,
+                'election_start_date' => $election->election_start_date,
+                'election_end_date' => $election->election_end_date,
+                'status' => $election->status,
+            ]
+        ], 200);
+    }
 
     //make other users admin
     public function makeAdmin(Request $request)
@@ -1016,6 +1067,41 @@ class AdminController extends Controller
             ],
         ], 200);
     }
+
+        // Delete a post
+        public function adminDeletePost($id)
+        {
+            // Get the authenticated user
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+
+            // Ensure the user is an admin
+            if ($user->role_id !== 3) {
+                return response()->json(['message' => 'Unauthorized: Only admins can reset their password'], 403);
+            }
+
+            $post = Post::find($id);
+    
+            if (!$post) {
+                return response()->json(['message' => 'Post not found.'], 404);
+            }
+    
+            // Delete the image file if it exists
+            if ($post->image) {
+                $path = public_path('storage/' . $post->image);
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+    
+            $post->delete();
+    
+            return response()->json([
+                'message' => 'Post deleted successfully.',
+            ], 200);
+        }
 
 
     //get admin election results
