@@ -361,6 +361,36 @@ class AdminController extends Controller
         ], 200);
     }
 
+    public function deleteElection(Request $request, $id)
+    {
+        // Check if the user is an admin
+        $user = Auth::user();
+        if ($user->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+    
+        // Find the election
+        $election = Election::find($id);
+        if (!$election) {
+            return response()->json(['message' => 'Election not found'], 404);
+        }
+    
+        try {
+            // Delete the election
+            $election->delete();
+            return response()->json([
+                'message' => 'Election deleted successfully',
+                'election_id' => $id
+            ], 200);
+        } catch (\Exception $e) {
+            
+            return response()->json([
+                'message' => 'Failed to delete election',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     //make other users admin
     public function makeAdmin(Request $request)
     {
