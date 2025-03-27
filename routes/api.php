@@ -100,7 +100,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     //make edit and delete elections
     Route::post('/elections/make', [AdminController::class, 'createElection'])->name('api.createElection'); //done
     Route::put('/admin/election/edit', [AdminController::class, 'editElection']);
-    Route::delete('admin/election/delete/{id}', [AdminController::class, 'deleteElection']);
+    Route::delete('/admin/election/delete/{id}', [AdminController::class, 'deleteElection']);
 
     //make and edit candidate
     Route::post('/verify-make-candidate', [AdminController::class, 'checkAndFileCandidacy'])->name('api.checkAndFileCandidacy'); //eto talaga dapat
