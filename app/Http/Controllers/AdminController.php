@@ -1229,27 +1229,19 @@ public function getAdminElectionTurnout(Request $request, $electionId)
     $perPage = $request->query('per_page', 10);
     $search = $request->query('search');
 
-    $votersQuery = Vote::where('votes.election_id', $electionId) // Explicitly specify votes.election_id
-        ->join('students', 'votes.voter_student_id', '=', 'students.id')
-        ->join('users', 'votes.user_id', '=', 'users.id')
-        ->join('candidates', 'votes.candidate_id', '=', 'candidates.id')
-        ->select(
-            'votes.voter_student_id as student_id',
-            'users.name as voter_name',
-            'students.department_id',
-            'votes.created_at as vote_date',
-            'candidates.id as candidate_id',
-            'candidates.user_id as candidate_user_id'
-        )
+    // Use Eloquent with relationships instead of raw joins
+    $votersQuery = Vote::where('election_id', $electionId)
         ->with([
-            'candidate.user' => fn($q) => $q->select('id', 'name'),
+            'voter' => fn($q) => $q->select('id', 'department_id'), // Student data
+            'user' => fn($q) => $q->select('id', 'name', 'student_id'), // User data with decrypted name
+            'candidate.user' => fn($q) => $q->select('id', 'name'), // Candidate’s user data
             'election' => fn($q) => $q->select('id', 'election_name')
         ]);
 
     if ($search) {
         $votersQuery->where(function ($query) use ($search) {
-            $query->where('users.name', 'like', "%{$search}%")
-                  ->orWhere('votes.voter_student_id', 'like', "%{$search}%");
+            $query->whereHas('user', fn($q) => $q->where('name', 'like', "%{$search}%"))
+                  ->orWhere('voter_student_id', 'like', "%{$search}%");
         });
     }
 
@@ -1258,10 +1250,10 @@ public function getAdminElectionTurnout(Request $request, $electionId)
     // Format voter data
     $voterList = $voters->map(function ($vote) {
         return [
-            'student_id' => $vote->student_id,
-            'name' => $vote->voter_name,
-            'department_id' => $vote->department_id,
-            'vote_date' => $vote->vote_date,
+            'student_id' => $vote->voter_student_id,
+            'name' => $vote->user->name ?? 'Unknown', // Decrypted via User model
+            'department_id' => $vote->voter->department_id,
+            'vote_date' => $vote->created_at,
             'voted_for' => [
                 'candidate_id' => $vote->candidate_id,
                 'candidate_name' => $vote->candidate->user->name ?? 'Unknown',
@@ -1291,8 +1283,6 @@ public function getAdminElectionTurnout(Request $request, $electionId)
         ],
     ], 200);
 }
-
-
 
     //get student count per department
     public function getStudentCountByDep()

@@ -14,7 +14,10 @@ class Vote extends Model
         // voter_student_id and candidate_student_id stay unencrypted (integers)
     ];
 
-    
+    public function voter()
+    {
+        return $this->belongsTo(Student::class, 'voter_student_id', 'id');
+    }
 
     public function user()
     {
