@@ -193,7 +193,9 @@ class PostController extends Controller
             $perPage = $request->query('per_page', 2); 
             $search = $request->query('search');
             // Fetch paginated posts with relationships
-            $query = Post::where('is_approved', true)->with([
+            $query = Post::where('is_approved', true)
+            ->orderBy('created_at', 'desc')
+            ->with([
                 'candidate' => function ($query) {
                     $query->select('id', 'user_id', 'profile_photo', 'position_id', 'party_list_id')
                         ->with([
