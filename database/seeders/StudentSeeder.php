@@ -11,18 +11,26 @@ class StudentSeeder extends Seeder
     {
         // Students for SSC, CCIS, and CON
         $students = [
+            //admin
+            ['id' => '9999',  'name' => 'Admin', 'department_id' => 1],
             // SSC Students (General)
-            ['id' => 1,  'name' => 'Jon Jones', 'department_id' => 1],
-            ['id' => 2,  'name' => 'Alex Pereira', 'department_id' => 2],
-            ['id' => 3,  'name' => 'Michael Bisping', 'department_id' => 3],
-            ['id' => 4,  'name' => 'Joe Rogan', 'department_id' => 4],
-            ['id' => 5,  'name' => 'Sarah Connor', 'department_id' => 5],
-            ['id' => 6,  'name' => 'Bruce Wayne', 'department_id' => 1],
-            ['id' => 7,  'name' => 'Clark Kent', 'department_id' => 2],
-            ['id' => 8,  'name' => 'Tony Stark', 'department_id' => 3],
-            ['id' => 9,  'name' => 'Peter Parker', 'department_id' => 4],
-            ['id' => 10, 'name' => 'Natasha Romanoff', 'department_id' => 3],
+            ['id' => 127509021,  'name' => 'Peter L. Cruz', 'department_id' => 1],
+            ['id' => 127509022,  'name' => 'Alexander S. Pereira', 'department_id' => 2],
+            ['id' => 127509023,  'name' => 'Jacob Marcus Elquiero', 'department_id' => 3],
+            ['id' => 127509024,  'name' => 'Joseph A. Manalang', 'department_id' => 4],
+            ['id' => 127509025,  'name' => 'Joanna Paula D. Santiago', 'department_id' => 5],
+            ['id' => 127509026,  'name' => 'Kyle James A. Perez ', 'department_id' => 1],
+            ['id' => 127509027,  'name' => 'David Jeffrey B. Punzalan', 'department_id' => 6],
+            ['id' => 127509028,  'name' => 'Michael D. Canlas', 'department_id' => 3],
+            ['id' => 127509029,  'name' => 'Kyla R. Agustin', 'department_id' => 4],
+            ['id' => 127509030, 'name' => 'Marvin Dave Tinio', 'department_id' => 3],
+            ['id' => 127509031,  'name' => 'Maria Leonora P. Dela Cruz', 'department_id' => 5],
+            ['id' => 127509032,  'name' => 'Arnold S. Del Rosario', 'department_id' => 6],
+            ['id' => 127509033,  'name' => 'Kimberly Cassandra L. Dizon', 'department_id' => 7],
+            ['id' => 127509034,  'name' => 'Mark Lawrenz C. Tuazon', 'department_id' => 8],
+            ['id' => 127509035, 'name' => 'Katherine S. Villaruel', 'department_id' => 2],
             
+            /*
             // CCIS Students (Department)
             ['id' => 11,  'name' => 'Joey Diaz', 'department_id' => 1],
             ['id' => 12,  'name' => 'Chris Bacon', 'department_id' => 1],
@@ -46,7 +54,7 @@ class StudentSeeder extends Seeder
             ['id' => 28,  'name' => 'Jorah Mormont', 'department_id' => 2],
             ['id' => 29,  'name' => 'Theon Greyjoy', 'department_id' => 2],
             ['id' => 30,  'name' => 'Brienne of Tarth', 'department_id' => 2],
-
+            */
             //TESTING BUKAS
             /*['id' => '0121300895',  'name' => 'John Gabriel Dayrit', 'department_id' => 1],
             ['id' => '0121302082',  'name' => 'John Aurvey Villapana', 'department_id' => 1],
@@ -55,8 +63,8 @@ class StudentSeeder extends Seeder
             ['id' => '0122303517',  'name' => 'Jesus Brown', 'department_id' => 1],
             ['id' => '0120301756',  'name' => 'Nelson Intal', 'department_id' => 1], */
             
-            ['id'=> '012345',  'name' => 'Test Smith', 'department_id' => 1],
-            ['id' => '9999',  'name' => 'Admin', 'department_id' => 1],
+            //['id'=> '012345',  'name' => 'Test Smith', 'department_id' => 1],
+            
         ];
 
         DB::table('students')->insert($students);

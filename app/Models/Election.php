@@ -44,4 +44,10 @@ class Election extends Model
     {
         return $this->hasMany(Position::class);
     }
+
+    public function departments()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
 }

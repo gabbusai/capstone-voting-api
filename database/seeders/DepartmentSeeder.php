@@ -19,6 +19,8 @@ class DepartmentSeeder extends Seeder
             ['id' => 4, 'name' => 'CHTM'],
             ['id' => 5, 'name' => 'CCM'],
             ['id' => 6, 'name' => 'COE'],
+            ['id' => 7, 'name' => 'CASSED'],
+            ['id' => 8, 'name' => 'COC'],
         ]);
     }
 }

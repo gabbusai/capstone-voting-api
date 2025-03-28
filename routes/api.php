@@ -145,6 +145,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/elections/{electionId}/results', [AdminController::class, 'getAdminElectionResults']);
     Route::get('/admin/elections/{electionId}/turnout', [AdminController::class, 'getAdminElectionTurnout']);
     Route::put('/admin/elections/{electionId}/status', [AdminController::class, 'updateElectionStatus']);
+    Route::get('/admin/elections/{electionId}/statistics', [AdminController::class, 'getElectionStatistics']);
 
     //feedback route
     Route::get('/admin/feedbacks/all', [StudentController::class, 'paginatedFeedbacks']);

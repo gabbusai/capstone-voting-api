@@ -62,6 +62,21 @@ class PositionSeeder extends Seeder
              ['name' => 'COE Secretary', 'is_general' => false, 'department_id' => 6],
              ['name' => 'COE Treasurer', 'is_general' => false, 'department_id' => 6],
              ['name' => 'COE Auditor', 'is_general' => false, 'department_id' => 6],
+
+            // Department-Specific Positions for CASSED (department_id = 7)
+             ['name' => 'CASSED President', 'is_general' => false, 'department_id' => 7],
+             ['name' => 'CASSED Vice President', 'is_general' => false, 'department_id' => 7],
+             ['name' => 'CASSED Secretary', 'is_general' => false, 'department_id' => 7],
+             ['name' => 'CASSED Treasurer', 'is_general' => false, 'department_id' => 7],
+             ['name' => 'CASSED Auditor', 'is_general' => false, 'department_id' => 7],
+
+
+            // Department-Specific Positions for COC (department_id = 8)
+            ['name' => 'COC President', 'is_general' => false, 'department_id' => 8],
+            ['name' => 'COC Vice President', 'is_general' => false, 'department_id' => 8],
+            ['name' => 'COC Secretary', 'is_general' => false, 'department_id' => 8],
+            ['name' => 'COC Treasurer', 'is_general' => false, 'department_id' => 8],
+            ['name' => 'COC Auditor', 'is_general' => false, 'department_id' => 8],
          ]);
      }
      

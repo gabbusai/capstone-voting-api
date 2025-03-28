@@ -19,6 +19,7 @@ use App\Models\Student;
 use App\Models\TokenOTP;
 use App\Models\User;
 use App\Models\Vote;
+use App\Models\VoteStatus;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -376,6 +377,7 @@ class AdminController extends Controller
         }
     
         try {
+            
             // Delete the election
             $election->delete();
             return response()->json([
@@ -1448,9 +1450,82 @@ public function getAdminElectionTurnout(Request $request, $electionId)
 
 
 
-
-
-
+    public function getElectionStatistics($electionId)
+    {
+        // Fetch the election details
+        $election = Election::with('electionType')->findOrFail($electionId);
+    
+        // Determine eligible voters based on election type
+        $eligibleVotersQuery = Student::query();
+        
+        // If departmental election, filter by department
+        if ($election->election_type_id == 2) { // Departmental election
+            $eligibleVotersQuery->where('department_id', $election->department_id);
+        }
+    
+        // Count total eligible voters
+        $totalEligibleVoters = $eligibleVotersQuery->count();
+    
+        // Get eligible voters per department
+        $departmentEligibleVoters = Student::when($election->election_type_id == 2, function ($query) use ($election) {
+            return $query->where('department_id', $election->department_id);
+        })
+        ->groupBy('department_id')
+        ->select('department_id', DB::raw('COUNT(*) as eligible_count'))
+        ->pluck('eligible_count', 'department_id');
+    
+        // Get voter turnout by department
+        $departmentTurnout = DB::table('vote_statuses')
+            ->join('users', 'vote_statuses.user_id', '=', 'users.id')
+            ->join('students', 'users.student_id', '=', 'students.id')
+            ->join('departments', 'students.department_id', '=', 'departments.id')
+            ->where('vote_statuses.election_id', $electionId)
+            ->select(
+                'departments.id as department_id', 
+                'departments.name as department_name',
+                DB::raw('COUNT(DISTINCT users.id) as total_voters'),
+                DB::raw('COUNT(DISTINCT CASE WHEN vote_statuses.has_voted = true THEN users.id END) as voted_count')
+            )
+            ->groupBy('departments.id', 'departments.name')
+            ->get();
+    
+        // Calculate total voted
+        $totalVoted = $departmentTurnout->sum('voted_count');
+    
+        // Map department turnout with additional calculations
+        $departmentTurnout = $departmentTurnout->map(function ($dept) use ($totalEligibleVoters, $departmentEligibleVoters, $totalVoted) {
+            // Get eligible voters for this specific department
+            $departmentEligibleCount = $departmentEligibleVoters[$dept->department_id] ?? 0;
+    
+            return [
+                'department_id' => $dept->department_id,
+                'department_name' => $dept->department_name,
+                'eligible_voters' => $departmentEligibleCount,
+                'voted_count' => $dept->voted_count,
+                'overall_turnout_percentage' => $totalEligibleVoters > 0 
+                    ? round(($dept->voted_count / $totalEligibleVoters) * 100, 2) 
+                    : 0,
+                'department_turnout_percentage' => $departmentEligibleCount > 0 
+                    ? round(($dept->voted_count / $departmentEligibleCount) * 100, 2) 
+                    : 0,
+                'votes_distribution_percentage' => $totalVoted > 0
+                    ? round(($dept->voted_count / $totalVoted) * 100, 2)
+                    : 0
+            ];
+        });
+        
+        $overallTurnoutPercentage = $totalEligibleVoters > 0 
+            ? round(($totalVoted / $totalEligibleVoters) * 100, 2) 
+            : 0;
+    
+        return response()->json([
+            'election_details' => $election,
+            'total_eligible_voters' => $totalEligibleVoters,
+            'total_voted' => $totalVoted,
+            'overall_turnout_percentage' => $overallTurnoutPercentage,
+            'department_turnout' => $departmentTurnout
+        ]);
+    }
 
 
 

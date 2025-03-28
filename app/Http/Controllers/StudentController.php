@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
@@ -384,70 +385,90 @@ class StudentController extends Controller
             $file = $request->file('file');
             $path = $file->getRealPath();
 
+            // Read file content and remove BOM if present
+            $content = file_get_contents($path);
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content); // Remove UTF-8 BOM
+            $tempPath = tempnam(sys_get_temp_dir(), 'csv');
+            file_put_contents($tempPath, $content);
+
             // Open and read the CSV
-            if (($handle = fopen($path, 'r')) === false) {
+            if (($handle = fopen($tempPath, 'r')) === false) {
+                unlink($tempPath);
                 return response()->json([
                     'message' => 'Failed to open the CSV file.',
                     'success' => false
                 ], 500);
             }
 
-            // Skip the header if it exists (assuming no header in your sample)
             $students = [];
+            $errors = [];
             $rowNumber = 0;
+            $validDepartments = Department::pluck('id')->toArray(); // Cache valid department IDs
 
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
                 $rowNumber++;
 
                 // Validate row structure
                 if (count($data) !== 3) {
-                    fclose($handle);
-                    return response()->json([
-                        'message' => "Invalid CSV format at row $rowNumber. Expected 3 columns (student_id, name, department_id).",
-                        'success' => false
-                    ], 422);
+                    $errors[] = "Row $rowNumber: Invalid format. Expected 3 columns (student_id, name, department_id), got " . count($data);
+                    continue;
                 }
 
                 [$studentId, $name, $departmentId] = $data;
 
-                // Basic validation for each row
-                if (!is_numeric($studentId) || !is_numeric($departmentId) || empty(trim($name))) {
-                    fclose($handle);
-                    return response()->json([
-                        'message' => "Invalid data at row $rowNumber: student_id and department_id must be numeric, name cannot be empty.",
-                        'success' => false
-                    ], 422);
+                // Clean and validate data
+                $studentId = trim($studentId);
+                $name = trim($name);
+                $departmentId = trim($departmentId);
+
+                if (!is_numeric($studentId) || !is_numeric($departmentId) || empty($name)) {
+                    $errors[] = "Row $rowNumber: Invalid data - student_id ($studentId) and department_id ($departmentId) must be numeric, name cannot be empty.";
+                    continue;
+                }
+
+                $studentId = (int) $studentId;
+                $departmentId = (int) $departmentId;
+
+                // Check if department_id exists
+                if (!in_array($departmentId, $validDepartments)) {
+                    $errors[] = "Row $rowNumber: Department ID $departmentId does not exist.";
+                    continue;
                 }
 
                 $students[] = [
-                    'id' => (int) $studentId,
-                    'name' => Crypt::encryptString(trim($name)), // Encrypt name before upsert
-                    'department_id' => (int) $departmentId,
+                    'id' => $studentId,
+                    'name' => Crypt::encryptString($name),
+                    'department_id' => $departmentId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
             }
 
             fclose($handle);
+            unlink($tempPath);
 
-            if (empty($students)) {
+            if (empty($students) && !empty($errors)) {
                 return response()->json([
                     'message' => 'No valid data found in the CSV.',
-                    'success' => false
+                    'success' => false,
+                    'errors' => $errors
                 ], 422);
             }
 
-            // Use upsert to insert or update students based on 'id'
-            Student::upsert(
-                $students,
-                ['id'], // Unique key(s) to match existing records
-                ['name', 'department_id', 'updated_at'] // Columns to update if record exists
-            );
+            // Use upsert within a transaction
+            DB::transaction(function () use ($students) {
+                Student::upsert(
+                    $students,
+                    ['id'],
+                    ['name', 'department_id', 'updated_at']
+                );
+            });
 
             return response()->json([
                 'message' => 'Students imported successfully.',
                 'success' => true,
-                'count' => count($students)
+                'count' => count($students),
+                'errors' => $errors ?: null // Include errors if any rows were skipped
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
