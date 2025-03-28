@@ -14,22 +14,50 @@ class StudentSeeder extends Seeder
             //admin
             ['id' => '9999',  'name' => 'Admin', 'department_id' => 1],
             // SSC Students (General)
+            ['id' => 122302639,  'name' => 'Rohit Dubb', 'department_id' => 6],
+            ['id' => 122303562,  'name' => 'Ayron D. Cagara', 'department_id' => 6],
+
+            //VPI
+            ['id' => 124302188,  'name' => 'Jaswin Glent H. Pineda', 'department_id' => 5],
+            ['id' => 121300291,  'name' => 'Zharren Manalastas', 'department_id' => 5],
+
+            //VPE
+            ['id' => 121300370,  'name' => 'Raiza C. Pineda', 'department_id' => 7],
+            ['id' => 122303547,  'name' => 'Dexter N. Rivera', 'department_id' => 7],
+
+            ['id' => 121300387,  'name' => 'Lineth T. Pamintuan', 'department_id' => 7],
+            ['id' => 122301256,  'name' => 'Mina P. Mallari', 'department_id' => 3],
+
+            //treasurer
+            ['id' => 122300700,  'name' => 'Gemarshane Tirona', 'department_id' => 4],
+            ['id' => 123301058,  'name' => 'James Labso', 'department_id' => 4],
+
+            //PIO
+            ['id' => 124300222,  'name' => 'Moriah Cassandra Mariano', 'department_id' => 2],
+            ['id' => 124302025,  'name' => 'Russel Gegante', 'department_id' => 2],
+
+
+
+            /*
             ['id' => 127509021,  'name' => 'Peter L. Cruz', 'department_id' => 1],
             ['id' => 127509022,  'name' => 'Alexander S. Pereira', 'department_id' => 2],
             ['id' => 127509023,  'name' => 'Jacob Marcus Elquiero', 'department_id' => 3],
             ['id' => 127509024,  'name' => 'Joseph A. Manalang', 'department_id' => 4],
             ['id' => 127509025,  'name' => 'Joanna Paula D. Santiago', 'department_id' => 5],
-            ['id' => 127509026,  'name' => 'Kyle James A. Perez ', 'department_id' => 1],
+            ['id' => 127509026,  'name' => 'Kyle James A. Perez ', 'department_id' => 7],
             ['id' => 127509027,  'name' => 'David Jeffrey B. Punzalan', 'department_id' => 6],
             ['id' => 127509028,  'name' => 'Michael D. Canlas', 'department_id' => 3],
             ['id' => 127509029,  'name' => 'Kyla R. Agustin', 'department_id' => 4],
+
+            
             ['id' => 127509030, 'name' => 'Marvin Dave Tinio', 'department_id' => 3],
             ['id' => 127509031,  'name' => 'Maria Leonora P. Dela Cruz', 'department_id' => 5],
             ['id' => 127509032,  'name' => 'Arnold S. Del Rosario', 'department_id' => 6],
             ['id' => 127509033,  'name' => 'Kimberly Cassandra L. Dizon', 'department_id' => 7],
-            ['id' => 127509034,  'name' => 'Mark Lawrenz C. Tuazon', 'department_id' => 8],
+            ['id' => 127509034,  'name' => 'Mark Lawrenz C. Tuazon', 'department_id' => 4],
             ['id' => 127509035, 'name' => 'Katherine S. Villaruel', 'department_id' => 2],
-            
+            */
+
             /*
             // CCIS Students (Department)
             ['id' => 11,  'name' => 'Joey Diaz', 'department_id' => 1],

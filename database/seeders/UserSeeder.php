@@ -13,24 +13,46 @@ class UserSeeder extends Seeder
     {
         $users = [
             //admin
-            ['id' => 1, 'name' => 'Admin', 'student_id' => '9999','department_id' => 2, 'role_id' => 3, 'contact_no' => '09123456789', 'email' => 'admin@example.com', 'section' => '5A', 'device_id' => 'device_0' ],
+            ['id' => 1, 'name' => 'Admin', 'student_id' => '9999','department_id' => 1, 'role_id' => 3, 'contact_no' => '09123456789', 'email' => 'admin@example.com', 'section' => '5A', 'device_id' => 'device_0' ],
             // SSC Users (General)
+            ['id' => 2,'name' => 'Rohit Dubb', 'student_id' => 122302639, 'department_id' => 6, 'role_id' => 2, 'contact_no' => '09123456701', 'email' => 'samplemail@example.com', 'section' => '4A', 'device_id' => 'device_01'],
+            ['id' => 3,'name' => 'Ayron D. Cagara', 'student_id' => 122303562, 'department_id' => 6, 'role_id' => 2, 'contact_no' => '09123456702', 'email' => 'contactmail@example.com', 'section' => '4B', 'device_id' => 'device_02'],
+
+            ['id' => 4,'name' => 'Jaswin Glent H. Pineda', 'student_id' => 124302188, 'department_id' => 5, 'role_id' => 2, 'contact_no' => '09123456701', 'email' => 'name.email@example.com', 'section' => '4A', 'device_id' => 'device_01'],
+            ['id' => 5,'name' => 'Zharren Manalastas', 'student_id' => 121300291, 'department_id' => 5, 'role_id' => 2, 'contact_no' => '09123456702', 'email' => 'testMail123@example.com', 'section' => '4B', 'device_id' => 'device_02'],
+
+            ['id' => 6,'name' => 'Raiza C. Pineda', 'student_id' => 121300370, 'department_id' => 7, 'role_id' => 2, 'contact_no' => '09123456701', 'email' => 'johndoe@example.com', 'section' => '4A', 'device_id' => 'device_01'],
+            ['id' => 7,'name' => 'Dexter N. Rivera', 'student_id' => 122303547, 'department_id' => 7, 'role_id' => 2, 'contact_no' => '09123456702', 'email' => 'johndoe2@example.com', 'section' => '4B', 'device_id' => 'device_02'],
+
+            ['id' => 8,'name' => 'Lineth T. Pamintuan', 'student_id' => 121300387, 'department_id' => 7, 'role_id' => 2, 'contact_no' => '09123456701', 'email' => 'johndoe3@example.com', 'section' => '4A', 'device_id' => 'device_01'],
+            ['id' => 9,'name' => 'Mina P. Mallari', 'student_id' => 122301256, 'department_id' => 3, 'role_id' => 2, 'contact_no' => '09123456702', 'email' => 'johndoe4@example.com', 'section' => '4B', 'device_id' => 'device_02'],
+
+            ['id' => 10,'name' => 'Gemarshane Tirona', 'student_id' => 122300700, 'department_id' => 4, 'role_id' => 2, 'contact_no' => '09123456701', 'email' => 'johndoe5@example.com', 'section' => '4A', 'device_id' => 'device_01'],
+            ['id' => 11,'name' => 'James Labso', 'student_id' => 123301058, 'department_id' => 4, 'role_id' => 2, 'contact_no' => '09123456702', 'email' => 'johndoe6@example.com', 'section' => '4B', 'device_id' => 'device_02'],
+
+            ['id' => 12,'name' => 'Moriah Cassandra Mariano', 'student_id' => 124300222, 'department_id' => 2, 'role_id' => 2, 'contact_no' => '09123456701', 'email' => 'elections@example.com', 'section' => '4A', 'device_id' => 'device_01'],
+            ['id' => 13,'name' => 'Russel Gegante', 'student_id' => 124302025, 'department_id' => 2, 'role_id' => 2, 'contact_no' => '09123456702', 'email' => 'johndoe7@example.com', 'section' => '4B', 'device_id' => 'device_02'],
+
+            
+            /*
             ['id' => 2,'name' => 'Peter L. Cruz', 'student_id' => 127509021, 'department_id' => 1, 'role_id' => 2, 'contact_no' => '09123456701', 'email' => 'peter.cruz@example.com', 'section' => '4A', 'device_id' => 'device_01'],
             ['id' => 3,'name' => 'Alexander S. Pereira', 'student_id' => 127509022, 'department_id' => 2, 'role_id' => 2, 'contact_no' => '09123456702', 'email' => 'alex.pereira@example.com', 'section' => '4B', 'device_id' => 'device_02'],
-            ['id' => 4,'name' => 'Unknown Student', 'student_id' => 127509023, 'department_id' => 3, 'role_id' => 2, 'contact_no' => '09123456703', 'email' => 'unknown@example.com', 'section' => '4C', 'device_id' => 'device_03'], // Empty name in your seeder
+            ['id' => 4,'name' => 'Jacob Marcus Elquiero', 'student_id' => 127509023, 'department_id' => 3, 'role_id' => 2, 'contact_no' => '09123456703', 'email' => 'elq@example.com', 'section' => '4C', 'device_id' => 'device_03'], // Empty name in your seeder
             ['id' => 5,'name' => 'Joseph A. Manalang', 'student_id' => 127509024, 'department_id' => 4, 'role_id' => 2, 'contact_no' => '09123456704', 'email' => 'joseph.manalang@example.com', 'section' => '4D', 'device_id' => 'device_04'],
             ['id' => 6,'name' => 'Joanna Paula D. Santiago', 'student_id' => 127509025, 'department_id' => 5, 'role_id' => 2, 'contact_no' => '09123456705', 'email' => 'joanna.santiago@example.com', 'section' => '5A', 'device_id' => 'device_05'],
             ['id' => 7,'name' => 'Kyle James A. Perez', 'student_id' => 127509026, 'department_id' => 1, 'role_id' => 2, 'contact_no' => '09123456706', 'email' => 'kyle.perez@example.com', 'section' => '5B', 'device_id' => 'device_06'],
             ['id' => 8,'name' => 'David Jeffrey B. Punzalan', 'student_id' => 127509027, 'department_id' => 6, 'role_id' => 2, 'contact_no' => '09123456707', 'email' => 'david.punzalan@example.com', 'section' => '5C', 'device_id' => 'device_07'],
             ['id' => 9,'name' => 'Michael D. Canlas', 'student_id' => 127509028, 'department_id' => 3, 'role_id' => 2, 'contact_no' => '09123456708', 'email' => 'michael.canlas@example.com', 'section' => '5D', 'device_id' => 'device_08'],
             ['id' => 10,'name' => 'Kyla R. Agustin', 'student_id' => 127509029, 'department_id' => 4, 'role_id' => 2, 'contact_no' => '09123456709', 'email' => 'kyla.agustin@example.com', 'section' => '4A', 'device_id' => 'device_09'],
+            
+            
             ['id' => 11,'name' => 'Marvin Dave Tinio', 'student_id' => 127509030, 'department_id' => 3, 'role_id' => 2, 'contact_no' => '09123456710', 'email' => 'marvin.tinio@example.com', 'section' => '4B', 'device_id' => 'device_10'],
             ['id' => 12,'name' => 'Maria Leonora P. Dela Cruz', 'student_id' => 127509031, 'department_id' => 5, 'role_id' => 2, 'contact_no' => '09123456711', 'email' => 'maria.delacruz@example.com', 'section' => '4C', 'device_id' => 'device_11'],
             ['id' => 13,'name' => 'Arnold S. Del Rosario', 'student_id' => 127509032, 'department_id' => 6, 'role_id' => 2, 'contact_no' => '09123456712', 'email' => 'arnold.delrosario@example.com', 'section' => '4D', 'device_id' => 'device_12'],
             ['id' => 14,'name' => 'Kimberly Cassandra L. Dizon', 'student_id' => 127509033, 'department_id' => 7, 'role_id' => 2, 'contact_no' => '09123456713', 'email' => 'kimberly.dizon@example.com', 'section' => '5A', 'device_id' => 'device_13'],
-            ['id' => 15,'name' => 'Mark Lawrenz C. Tuazon', 'student_id' => 127509034, 'department_id' => 8, 'role_id' => 2, 'contact_no' => '09123456714', 'email' => 'mark.tuazon@example.com', 'section' => '5B', 'device_id' => 'device_14'],
+            ['id' => 15,'name' => 'Mark Lawrenz C. Tuazon', 'student_id' => 127509034, 'department_id' => 4, 'role_id' => 2, 'contact_no' => '09123456714', 'email' => 'mark.tuazon@example.com', 'section' => '5B', 'device_id' => 'device_14'],
             ['id' => 16,'name' => 'Katherine S. Villaruel', 'student_id' => 127509035, 'department_id' => 2, 'role_id' => 2, 'contact_no' => '09123456715', 'email' => 'katherine.villaruel@example.com', 'section' => '5C', 'device_id' => 'device_15'],
-
+            */
             
             /*
             // CCIS Users

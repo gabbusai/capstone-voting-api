@@ -70,15 +70,19 @@ class ElectionController extends Controller
 
     public function getAllRegistered()
     {
-        // Fetch all students who are associated with a user
-        $students = Student::whereHas('user')->with('user')->count();
-        $studentCount = Student::all()->count();
-        $userCount = $students;
-
+        // Fetch count of all students who are associated with a non-admin user
+        $registeredStudents = Student::whereHas('user', function ($query) {
+            $query->where('role_id', '!=', 3); // Exclude admins
+        })->with('user')->count();
+    
+        // Total students, excluding those linked to admins
+        $totalStudents = Student::whereDoesntHave('user', function ($query) {
+            $query->where('role_id', 3); // Exclude students linked to admins
+        })->count();
+    
         return response()->json([
-            'total_students' => $studentCount,
-            'total_registered' => $userCount,
-            
+            'total_students' => $totalStudents,
+            'total_registered' => $registeredStudents,
         ], 200);
     }
 

@@ -751,15 +751,18 @@ class AdminController extends Controller
     {
         $department = Department::with(['students' => function ($query) {
             $query->select('id', 'name', 'department_id')
+                  ->whereDoesntHave('user', function ($subQuery) {
+                      $subQuery->where('role_id', 3); // Exclude students linked to admins
+                  })
                   ->with(['user' => function ($query) {
                       $query->select('id', 'student_id');
                   }]);
         }])->find($id);
-
+    
         if (!$department) {
             return response()->json(['message' => 'Department not found'], 404);
         }
-
+    
         $students = $department->students->map(function ($student) {
             return [
                 'student_id' => $student->id,
@@ -767,7 +770,7 @@ class AdminController extends Controller
                 'is_registered' => !is_null($student->user), 
             ];
         });
-
+    
         return response()->json([
             'message' => 'Department retrieved successfully',
             'department' => [
@@ -777,7 +780,6 @@ class AdminController extends Controller
             ],
         ], 200);
     }
-
     /**
      * Create a new department
      */
@@ -1141,39 +1143,51 @@ class AdminController extends Controller
         // Fetch the election with candidates and relationships
         $election = Election::with(['candidates.position', 'candidates.partylist', 'candidates.user'])
             ->find($electionId);
-
+    
         if (!$election) {
             return response()->json(['message' => 'Election not found'], 404);
         }
-
-        // Total registered students (potential voters)
+    
+        // Total registered students (potential voters), excluding admins
         $totalVoters = Student::where(function ($query) use ($election) {
             if ($election->department_id) {
                 $query->where('department_id', $election->department_id);
             }
+        })->whereDoesntHave('user', function ($query) {
+            $query->where('role_id', 3); // Exclude admins
         })->count();
-
-        // Total votes cast (unique voters)
+    
+        // Total votes cast (unique voters), excluding admins
         $votesCast = Vote::where('election_id', $electionId)
+            ->whereHas('voter', function ($query) {
+                $query->whereDoesntHave('user', function ($subQuery) {
+                    $subQuery->where('role_id', 3); // Exclude admins
+                });
+            })
             ->distinct('voter_student_id')
             ->count('voter_student_id');
-
+    
         // Calculate turnout percentage
         $turnoutPercentage = $totalVoters > 0 ? round(($votesCast / $totalVoters) * 100, 2) : 0;
-
-        // Fetch vote tallies per candidate
+    
+        // Fetch vote tallies per candidate, excluding admin votes
         $tallies = Vote::where('election_id', $electionId)
+            ->whereHas('voter', function ($query) {
+                $query->whereDoesntHave('user', function ($subQuery) {
+                    $subQuery->where('role_id', 3); // Exclude admins
+                });
+            })
             ->selectRaw('candidate_id, COUNT(*) as vote_count')
             ->groupBy('candidate_id')
             ->get()
             ->keyBy('candidate_id');
-
+    
         // Organize results by position
         $results = [];
         foreach ($election->candidates as $candidate) {
             $positionId = $candidate->position->id;
             $positionName = $candidate->position->name;
-
+    
             if (!isset($results[$positionId])) {
                 $results[$positionId] = [
                     'position_id' => $positionId,
@@ -1182,9 +1196,9 @@ class AdminController extends Controller
                     'winners' => [],
                 ];
             }
-
+    
             $voteCount = $tallies[$candidate->id]->vote_count ?? 0;
-
+    
             $results[$positionId]['candidates'][] = [
                 'candidate_id' => $candidate->id,
                 'student_id' => $candidate->student_id,
@@ -1194,16 +1208,16 @@ class AdminController extends Controller
                 'votes' => $voteCount,
             ];
         }
-
+    
         // Determine winners and add admin details
         foreach ($results as &$position) {
             if (empty($position['candidates'])) {
                 $position['winners'] = ['No candidates for this position'];
                 continue;
             }
-
+    
             $position['candidates'] = collect($position['candidates'])->sortByDesc('votes')->values();
-
+    
             if ($position['candidates'][0]['votes'] === 0) {
                 $position['winners'] = ['No votes received for this position'];
             } else {
@@ -1213,7 +1227,7 @@ class AdminController extends Controller
                     ->values();
             }
         }
-
+    
         return response()->json([
             'election' => [
                 'id' => $election->id,
@@ -1228,7 +1242,8 @@ class AdminController extends Controller
         ], 200);
     }
 
-
+    
+//unused
     public function getElectionTurnout(Request $request, $electionId)
 {
     $election = Election::find($electionId);
@@ -1327,31 +1342,38 @@ public function getAdminElectionTurnout(Request $request, $electionId)
         return response()->json(['message' => 'Election not found'], 404);
     }
 
-    // Total registered students (potential voters)
+    // Total registered students (potential voters), excluding admins
     $totalVoters = Student::where(function ($query) use ($election) {
         if ($election->department_id) {
             $query->where('department_id', $election->department_id);
         }
+    })->whereDoesntHave('user', function ($query) {
+        $query->where('role_id', 3); // Exclude admins
     })->count();
 
-    // Total votes cast (unique voters)
+    // Total votes cast (unique voters), excluding admins
     $votesCast = Vote::where('election_id', $electionId)
+        ->whereHas('user', function ($query) {
+            $query->where('role_id', '!=', 3); // Exclude admins
+        })
         ->distinct('voter_student_id')
         ->count('voter_student_id');
 
     // Turnout percentage
     $turnoutPercentage = $totalVoters > 0 ? round(($votesCast / $totalVoters) * 100, 2) : 0;
 
-    // Paginated voters list with search
+    // Paginated voters list with search, excluding admins
     $perPage = $request->query('per_page', 10);
     $search = $request->query('search');
 
-    // Use Eloquent with relationships instead of raw joins
     $votersQuery = Vote::where('election_id', $electionId)
+        ->whereHas('user', function ($query) {
+            $query->where('role_id', '!=', 3); // Exclude admins
+        })
         ->with([
-            'voter' => fn($q) => $q->select('id', 'department_id'), // Student data
-            'user' => fn($q) => $q->select('id', 'name', 'student_id'), // User data with decrypted name
-            'candidate.user' => fn($q) => $q->select('id', 'name'), // Candidate’s user data
+            'voter' => fn($q) => $q->select('id', 'department_id'),
+            'user' => fn($q) => $q->select('id', 'name', 'student_id'),
+            'candidate.user' => fn($q) => $q->select('id', 'name'),
             'election' => fn($q) => $q->select('id', 'election_name')
         ]);
 
@@ -1368,7 +1390,7 @@ public function getAdminElectionTurnout(Request $request, $electionId)
     $voterList = $voters->map(function ($vote) {
         return [
             'student_id' => $vote->voter_student_id,
-            'name' => $vote->user->name ?? 'Unknown', // Decrypted via User model
+            'name' => $vote->user->name ?? 'Unknown',
             'department_id' => $vote->voter->department_id,
             'vote_date' => $vote->created_at,
             'voted_for' => [
@@ -1403,128 +1425,244 @@ public function getAdminElectionTurnout(Request $request, $electionId)
 
     //get student count per department
     public function getStudentCountByDep()
-    {
-        try {
-            // Total students across all departments
-            $totalStudents = Student::count();
+{
+    try {
+        // Total students across all departments, excluding admins
+        $totalStudents = Student::whereDoesntHave('user', function ($query) {
+            $query->where('role_id', 3); // Exclude students linked to admins
+        })->count();
 
-            // Stats per department: total students and registered students
-            $departmentStats = Department::select('departments.id', 'departments.name')
-                ->leftJoin('students', 'departments.id', '=', 'students.department_id')
-                ->leftJoin('users', 'students.id', '=', 'users.student_id')
-                ->groupBy('departments.id', 'departments.name')
-                ->selectRaw('COUNT(DISTINCT students.id) as total_students')
-                ->selectRaw('COUNT(DISTINCT users.id) as registered_students')
-                ->get()
-                ->map(function ($department) {
-                    return [
-                        'department_id' => $department->id,
-                        'department_name' => $department->name,
-                        'total_students' => (int) $department->total_students,
-                        'registered_students' => (int) $department->registered_students,
-                    ];
-                });
+        // Stats per department: total students and registered students, excluding admins
+        $departmentStats = Department::select('departments.id', 'departments.name')
+            ->leftJoin('students', 'departments.id', '=', 'students.department_id')
+            ->leftJoin('users', 'students.id', '=', 'users.student_id')
+            ->where(function ($query) {
+                $query->whereNull('users.role_id') // Students without users
+                      ->orWhere('users.role_id', '!=', 3); // Non-admin users
+            })
+            ->groupBy('departments.id', 'departments.name')
+            ->selectRaw('COUNT(DISTINCT students.id) as total_students')
+            ->selectRaw('COUNT(DISTINCT users.id) as registered_students')
+            ->get()
+            ->map(function ($department) {
+                return [
+                    'department_id' => $department->id,
+                    'department_name' => $department->name,
+                    'total_students' => (int) $department->total_students,
+                    'registered_students' => (int) $department->registered_students,
+                ];
+            });
 
-            // Total registered students across all departments
-            $totalRegistered = Student::whereHas('user')->count();
+        // Total registered students across all departments, excluding admins
+        $totalRegistered = Student::whereHas('user', function ($query) {
+            $query->where('role_id', '!=', 3); // Exclude admins
+        })->count();
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'total_students' => $totalStudents,
-                    'total_registered' => $totalRegistered,
-                    'departments' => $departmentStats,
-                ],
-                'message' => 'Student statistics retrieved successfully.',
-            ], 200);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_students' => $totalStudents,
+                'total_registered' => $totalRegistered,
+                'departments' => $departmentStats,
+            ],
+            'message' => 'Student statistics retrieved successfully.',
+        ], 200);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve student statistics.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to retrieve student statistics.',
+            'error' => $e->getMessage(),
+        ], 500);
     }
+}
 
 
 
 
     public function getElectionStatistics($electionId)
+{
+    $election = Election::with('electionType')->findOrFail($electionId);
+
+    // Determine eligible voters based on election type, excluding admins
+    $eligibleVotersQuery = Student::whereDoesntHave('user', function ($query) {
+        $query->where('role_id', 3); // Exclude admins
+    });
+
+    if ($election->election_type_id == 2) { // Departmental election
+        $eligibleVotersQuery->where('department_id', $election->department_id);
+    }
+
+    // Count total eligible voters
+    $totalEligibleVoters = $eligibleVotersQuery->count();
+
+    // Get eligible voters per department, excluding admins
+    $departmentEligibleVoters = Student::whereDoesntHave('user', function ($query) {
+        $query->where('role_id', 3); // Exclude admins
+    })
+    ->when($election->election_type_id == 2, function ($query) use ($election) {
+        return $query->where('department_id', $election->department_id);
+    })
+    ->groupBy('department_id')
+    ->select('department_id', DB::raw('COUNT(*) as eligible_count'))
+    ->pluck('eligible_count', 'department_id');
+
+    // Get voter turnout by department, excluding admins
+    $departmentTurnout = DB::table('vote_statuses')
+        ->join('users', 'vote_statuses.user_id', '=', 'users.id')
+        ->join('students', 'users.student_id', '=', 'students.id')
+        ->join('departments', 'students.department_id', '=', 'departments.id')
+        ->where('vote_statuses.election_id', $electionId)
+        ->where('users.role_id', '!=', 3) // Exclude admins
+        ->select(
+            'departments.id as department_id',
+            'departments.name as department_name',
+            DB::raw('COUNT(DISTINCT users.id) as total_voters'),
+            DB::raw('COUNT(DISTINCT CASE WHEN vote_statuses.has_voted = true THEN users.id END) as voted_count')
+        )
+        ->groupBy('departments.id', 'departments.name')
+        ->get();
+
+    // Calculate total voted
+    $totalVoted = $departmentTurnout->sum('voted_count');
+
+    // Map department turnout with additional calculations
+    $departmentTurnout = $departmentTurnout->map(function ($dept) use ($totalEligibleVoters, $departmentEligibleVoters, $totalVoted) {
+        $departmentEligibleCount = $departmentEligibleVoters[$dept->department_id] ?? 0;
+        return [
+            'department_id' => $dept->department_id,
+            'department_name' => $dept->department_name,
+            'eligible_voters' => $departmentEligibleCount,
+            'voted_count' => $dept->voted_count,
+            'overall_turnout_percentage' => $totalEligibleVoters > 0 
+                ? round(($dept->voted_count / $totalEligibleVoters) * 100, 2) 
+                : 0,
+            'department_turnout_percentage' => $departmentEligibleCount > 0 
+                ? round(($dept->voted_count / $departmentEligibleCount) * 100, 2) 
+                : 0,
+            'votes_distribution_percentage' => $totalVoted > 0
+                ? round(($dept->voted_count / $totalVoted) * 100, 2)
+                : 0
+        ];
+    });
+
+    $overallTurnoutPercentage = $totalEligibleVoters > 0 
+        ? round(($totalVoted / $totalEligibleVoters) * 100, 2) 
+        : 0;
+
+    return response()->json([
+        'election_details' => $election,
+        'total_eligible_voters' => $totalEligibleVoters,
+        'total_voted' => $totalVoted,
+        'overall_turnout_percentage' => $overallTurnoutPercentage,
+        'department_turnout' => $departmentTurnout
+    ]);
+}
+    //voter election status
+    public function electionVoterStatus(Request $request, $electionId)
     {
-        // Fetch the election details
-        $election = Election::with('electionType')->findOrFail($electionId);
-    
-        // Determine eligible voters based on election type
-        $eligibleVotersQuery = Student::query();
-        
-        // If departmental election, filter by department
-        if ($election->election_type_id == 2) { // Departmental election
-            $eligibleVotersQuery->where('department_id', $election->department_id);
+        // Check if user is admin
+        $user = Auth::user();
+        if ($user->role_id !== 3) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
     
-        // Count total eligible voters
-        $totalEligibleVoters = $eligibleVotersQuery->count();
+        // Find the election
+        $election = Election::findOrFail($electionId);
     
-        // Get eligible voters per department
-        $departmentEligibleVoters = Student::when($election->election_type_id == 2, function ($query) use ($election) {
-            return $query->where('department_id', $election->department_id);
-        })
-        ->groupBy('department_id')
-        ->select('department_id', DB::raw('COUNT(*) as eligible_count'))
-        ->pluck('eligible_count', 'department_id');
+        $perPage = $request->query('per_page', 15);
+        $isGeneralElection = $election->election_type_id === 1;
     
-        // Get voter turnout by department
-        $departmentTurnout = DB::table('vote_statuses')
-            ->join('users', 'vote_statuses.user_id', '=', 'users.id')
-            ->join('students', 'users.student_id', '=', 'students.id')
-            ->join('departments', 'students.department_id', '=', 'departments.id')
-            ->where('vote_statuses.election_id', $electionId)
-            ->select(
-                'departments.id as department_id', 
-                'departments.name as department_name',
-                DB::raw('COUNT(DISTINCT users.id) as total_voters'),
-                DB::raw('COUNT(DISTINCT CASE WHEN vote_statuses.has_voted = true THEN users.id END) as voted_count')
-            )
-            ->groupBy('departments.id', 'departments.name')
-            ->get();
+        // Base query for eligible students, excluding admins
+        $eligibleStudentsQuery = Student::query()
+            ->with('user')
+            ->whereDoesntHave('user', function ($query) {
+                $query->where('role_id', 3); // Exclude admins
+            })
+            ->when(!$isGeneralElection, function ($query) use ($election) {
+                return $query->where('department_id', $election->department_id);
+            });
     
-        // Calculate total voted
-        $totalVoted = $departmentTurnout->sum('voted_count');
+        // Get users who voted in this election, excluding admins
+        $votedUserIds = VoteStatus::where('election_id', $electionId)
+            ->whereHas('user', function ($query) {
+                $query->where('role_id', '!=', 3); // Exclude admins
+            })
+            ->pluck('user_id')
+            ->toArray();
     
-        // Map department turnout with additional calculations
-        $departmentTurnout = $departmentTurnout->map(function ($dept) use ($totalEligibleVoters, $departmentEligibleVoters, $totalVoted) {
-            // Get eligible voters for this specific department
-            $departmentEligibleCount = $departmentEligibleVoters[$dept->department_id] ?? 0;
+        // Apply search filter
+        $searchTerm = $request->query('search');
+        if ($searchTerm) {
+            $eligibleStudentsQuery->where(function ($query) use ($searchTerm) {
+                $query->where('id', 'like', "%{$searchTerm}%")
+                      ->orWhere('name', 'like', "%{$searchTerm}%")
+                      ->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                          $userQuery->where('name', 'like', "%{$searchTerm}%");
+                      });
+            });
+        }
     
+        // Apply voting status filter
+        $votingStatus = $request->query('voting_status');
+        if ($votingStatus !== null) {
+            $eligibleStudentsQuery->whereHas('user', function ($query) use ($votedUserIds, $votingStatus) {
+                $query->when($votingStatus === 'voted', function ($subQuery) use ($votedUserIds) {
+                    return $subQuery->whereIn('id', $votedUserIds);
+                })->when($votingStatus === 'not_voted', function ($subQuery) use ($votedUserIds) {
+                    return $subQuery->whereNotIn('id', $votedUserIds);
+                });
+            });
+        }
+    
+        // Apply department filter
+        $departmentId = $request->query('department_id');
+        if ($departmentId) {
+            $eligibleStudentsQuery->where('department_id', $departmentId);
+        }
+    
+        // Apply sorting
+        $sortBy = $request->query('sort_by', 'id');
+        $sortDirection = $request->query('sort_direction', 'asc');
+        $allowedSortColumns = ['id', 'name', 'department_id'];
+        $allowedSortDirections = ['asc', 'desc'];
+    
+        if (in_array($sortBy, $allowedSortColumns) && in_array($sortDirection, $allowedSortDirections)) {
+            $eligibleStudentsQuery->orderBy($sortBy, $sortDirection);
+        }
+    
+        // Paginate students
+        $students = $eligibleStudentsQuery->paginate($perPage);
+    
+        // Transform the data
+        $voterStatus = $students->map(function ($student) use ($votedUserIds) {
+            $user = $student->user;
             return [
-                'department_id' => $dept->department_id,
-                'department_name' => $dept->department_name,
-                'eligible_voters' => $departmentEligibleCount,
-                'voted_count' => $dept->voted_count,
-                'overall_turnout_percentage' => $totalEligibleVoters > 0 
-                    ? round(($dept->voted_count / $totalEligibleVoters) * 100, 2) 
-                    : 0,
-                'department_turnout_percentage' => $departmentEligibleCount > 0 
-                    ? round(($dept->voted_count / $departmentEligibleCount) * 100, 2) 
-                    : 0,
-                'votes_distribution_percentage' => $totalVoted > 0
-                    ? round(($dept->voted_count / $totalVoted) * 100, 2)
-                    : 0
+                'student_id' => $student->id,
+                'student_name' => $student->name,
+                'user_id' => $user ? $user->id : null,
+                'user_name' => $user ? $user->name : 'No User Account',
+                'department_id' => $student->department_id,
+                'has_voted' => $user && in_array($user->id, $votedUserIds),
             ];
         });
-        
-        $overallTurnoutPercentage = $totalEligibleVoters > 0 
-            ? round(($totalVoted / $totalEligibleVoters) * 100, 2) 
-            : 0;
     
         return response()->json([
-            'election_details' => $election,
-            'total_eligible_voters' => $totalEligibleVoters,
-            'total_voted' => $totalVoted,
-            'overall_turnout_percentage' => $overallTurnoutPercentage,
-            'department_turnout' => $departmentTurnout
-        ]);
+            'election' => [
+                'id' => $election->id,
+                'name' => $election->election_name,
+                'type' => $election->electionType->name ?? 'Unknown',
+            ],
+            'voters' => $voterStatus,
+            'pagination' => [
+                'current_page' => $students->currentPage(),
+                'total_pages' => $students->lastPage(),
+                'per_page' => $students->perPage(),
+                'total' => $students->total(),
+                'next_page_url' => $students->nextPageUrl(),
+                'prev_page_url' => $students->previousPageUrl(),
+            ],
+        ], 200);
     }
 
 

@@ -21,7 +21,7 @@ class ElectionSeeder extends Seeder
                 [
                     'election_type_id' => 1, // general election
                     'department_id' => null, // Setting to null for general election
-                    'election_name' => 'Supreme Student Council Elections 2024',
+                    'election_name' => 'Supreme Student Council Mock Elections 2025',
                     'campaign_start_date' => $now,
                     'campaign_end_date' => $now->copy()->addWeek(), // One week from now
                     'election_start_date' => $now->copy()->addWeek()->addDay(), // Starts after campaign ends
@@ -34,7 +34,7 @@ class ElectionSeeder extends Seeder
                 [
                     'election_type_id' => 2, // Department Election
                     'department_id' => 1, // 1 for CCIS
-                    'election_name' => 'CCIS Student Council Elections 2024',
+                    'election_name' => 'CCIS Student Council Elections 2025',
                     'campaign_start_date' => $now,
                     'campaign_end_date' => $now->copy()->addWeek(), // One week from now
                     'election_start_date' => $now->copy()->addWeek()->addDay(), // Starts after campaign ends
@@ -47,7 +47,7 @@ class ElectionSeeder extends Seeder
                 [
                     'election_type_id' => 2, // Department Election
                     'department_id' => 2, // 1 for CCIS
-                    'election_name' => 'CON Student Council Elections 2024',
+                    'election_name' => 'CON Student Council Elections 2025',
                     'campaign_start_date' => $now,
                     'campaign_end_date' => $now->copy()->addWeek(), // One week from now
                     'election_start_date' => $now->copy()->addWeek()->addDay(), // Starts after campaign ends
