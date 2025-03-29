@@ -1182,18 +1182,6 @@ class AdminController extends Controller
             ->get()
             ->keyBy('candidate_id');
     
-        // Fetch unique voters per position, excluding admin votes
-        $votersPerPosition = Vote::where('election_id', $electionId)
-            ->whereHas('voter', function ($query) {
-                $query->whereDoesntHave('user', function ($subQuery) {
-                    $subQuery->where('role_id', 3); // Exclude admins
-                });
-            })
-            ->join('candidates', 'votes.candidate_id', '=', 'candidates.id')
-            ->selectRaw('candidates.position_id, COUNT(DISTINCT votes.voter_student_id) as voter_count')
-            ->groupBy('candidates.position_id')
-            ->pluck('voter_count', 'position_id');
-    
         // Organize results by position
         $results = [];
         foreach ($election->candidates as $candidate) {
@@ -1201,15 +1189,11 @@ class AdminController extends Controller
             $positionName = $candidate->position->name;
     
             if (!isset($results[$positionId])) {
-                $uniqueVotersForPosition = $votersPerPosition[$positionId] ?? 0;
-                $abstains = $totalVoters - $uniqueVotersForPosition;
-    
                 $results[$positionId] = [
                     'position_id' => $positionId,
                     'position_name' => $positionName,
                     'candidates' => [],
                     'winners' => [],
-                    'abstains' => $abstains >= 0 ? $abstains : 0, // Ensure no negative values
                 ];
             }
     
@@ -1225,7 +1209,7 @@ class AdminController extends Controller
             ];
         }
     
-        // Determine winners and finalize position details
+        // Determine winners and add admin details
         foreach ($results as &$position) {
             if (empty($position['candidates'])) {
                 $position['winners'] = ['No candidates for this position'];
@@ -1257,6 +1241,7 @@ class AdminController extends Controller
             'results' => array_values($results),
         ], 200);
     }
+
     
 //unused
     public function getElectionTurnout(Request $request, $electionId)
