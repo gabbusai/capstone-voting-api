@@ -1170,17 +1170,32 @@ class AdminController extends Controller
         // Calculate turnout percentage
         $turnoutPercentage = $totalVoters > 0 ? round(($votesCast / $totalVoters) * 100, 2) : 0;
     
-        // Fetch vote tallies per candidate, excluding admin votes
+        // Fetch vote tallies per candidate, including position_id, excluding admin votes
         $tallies = Vote::where('election_id', $electionId)
             ->whereHas('voter', function ($query) {
                 $query->whereDoesntHave('user', function ($subQuery) {
                     $subQuery->where('role_id', 3); // Exclude admins
                 });
             })
-            ->selectRaw('candidate_id, COUNT(*) as vote_count')
-            ->groupBy('candidate_id')
+            ->join('candidates', 'votes.candidate_id', '=', 'candidates.id')
+            ->selectRaw('candidates.position_id, candidates.id as candidate_id, COUNT(*) as vote_count')
+            ->groupBy('candidates.position_id', 'candidates.id')
             ->get()
-            ->keyBy('candidate_id');
+            ->mapWithKeys(function ($item) {
+                return [$item->candidate_id => ['vote_count' => $item->vote_count, 'position_id' => $item->position_id]];
+            });
+    
+        // Count unique voters per position to calculate abstains
+        $votersPerPosition = Vote::where('election_id', $electionId)
+            ->whereHas('voter', function ($query) {
+                $query->whereDoesntHave('user', function ($subQuery) {
+                    $subQuery->where('role_id', 3); // Exclude admins
+                });
+            })
+            ->join('candidates', 'votes.candidate_id', '=', 'candidates.id')
+            ->selectRaw('candidates.position_id, COUNT(DISTINCT votes.voter_student_id) as voter_count')
+            ->groupBy('candidates.position_id')
+            ->pluck('voter_count', 'position_id');
     
         // Organize results by position
         $results = [];
@@ -1189,15 +1204,21 @@ class AdminController extends Controller
             $positionName = $candidate->position->name;
     
             if (!isset($results[$positionId])) {
+                $votesForPosition = $votersPerPosition[$positionId] ?? 0;
+                $abstains = $totalVoters - $votesForPosition;
+    
                 $results[$positionId] = [
                     'position_id' => $positionId,
                     'position_name' => $positionName,
+                    'total_eligible_voters' => $totalVoters,
+                    'votes_cast' => $votesForPosition,
+                    'abstains' => $abstains,
                     'candidates' => [],
                     'winners' => [],
                 ];
             }
     
-            $voteCount = $tallies[$candidate->id]->vote_count ?? 0;
+            $voteCount = $tallies[$candidate->id]['vote_count'] ?? 0;
     
             $results[$positionId]['candidates'][] = [
                 'candidate_id' => $candidate->id,
@@ -1209,10 +1230,12 @@ class AdminController extends Controller
             ];
         }
     
-        // Determine winners and add admin details
+        // Handle positions with no candidates and determine winners
         foreach ($results as &$position) {
             if (empty($position['candidates'])) {
                 $position['winners'] = ['No candidates for this position'];
+                $position['votes_cast'] = 0;
+                $position['abstains'] = $totalVoters; // All eligible voters abstained
                 continue;
             }
     
@@ -1241,7 +1264,6 @@ class AdminController extends Controller
             'results' => array_values($results),
         ], 200);
     }
-
     
 //unused
     public function getElectionTurnout(Request $request, $electionId)
