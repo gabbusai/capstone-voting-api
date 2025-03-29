@@ -1170,22 +1170,19 @@ class AdminController extends Controller
         // Calculate turnout percentage
         $turnoutPercentage = $totalVoters > 0 ? round(($votesCast / $totalVoters) * 100, 2) : 0;
     
-        // Fetch vote tallies per candidate, including position_id, excluding admin votes
+        // Fetch vote tallies per candidate, excluding admin votes
         $tallies = Vote::where('election_id', $electionId)
             ->whereHas('voter', function ($query) {
                 $query->whereDoesntHave('user', function ($subQuery) {
                     $subQuery->where('role_id', 3); // Exclude admins
                 });
             })
-            ->join('candidates', 'votes.candidate_id', '=', 'candidates.id')
-            ->selectRaw('candidates.position_id, candidates.id as candidate_id, COUNT(*) as vote_count')
-            ->groupBy('candidates.position_id', 'candidates.id')
+            ->selectRaw('candidate_id, COUNT(*) as vote_count')
+            ->groupBy('candidate_id')
             ->get()
-            ->mapWithKeys(function ($item) {
-                return [$item->candidate_id => ['vote_count' => $item->vote_count, 'position_id' => $item->position_id]];
-            });
+            ->keyBy('candidate_id');
     
-        // Count unique voters per position to calculate abstains
+        // Fetch unique voters per position, excluding admin votes
         $votersPerPosition = Vote::where('election_id', $electionId)
             ->whereHas('voter', function ($query) {
                 $query->whereDoesntHave('user', function ($subQuery) {
@@ -1204,21 +1201,19 @@ class AdminController extends Controller
             $positionName = $candidate->position->name;
     
             if (!isset($results[$positionId])) {
-                $votesForPosition = $votersPerPosition[$positionId] ?? 0;
-                $abstains = $totalVoters - $votesForPosition;
+                $uniqueVotersForPosition = $votersPerPosition[$positionId] ?? 0;
+                $abstains = $totalVoters - $uniqueVotersForPosition;
     
                 $results[$positionId] = [
                     'position_id' => $positionId,
                     'position_name' => $positionName,
-                    'total_eligible_voters' => $totalVoters,
-                    'votes_cast' => $votesForPosition,
-                    'abstains' => $abstains,
                     'candidates' => [],
                     'winners' => [],
+                    'abstains' => $abstains >= 0 ? $abstains : 0, // Ensure no negative values
                 ];
             }
     
-            $voteCount = $tallies[$candidate->id]['vote_count'] ?? 0;
+            $voteCount = $tallies[$candidate->id]->vote_count ?? 0;
     
             $results[$positionId]['candidates'][] = [
                 'candidate_id' => $candidate->id,
@@ -1230,12 +1225,10 @@ class AdminController extends Controller
             ];
         }
     
-        // Handle positions with no candidates and determine winners
+        // Determine winners and finalize position details
         foreach ($results as &$position) {
             if (empty($position['candidates'])) {
                 $position['winners'] = ['No candidates for this position'];
-                $position['votes_cast'] = 0;
-                $position['abstains'] = $totalVoters; // All eligible voters abstained
                 continue;
             }
     
